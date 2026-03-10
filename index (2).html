@@ -1,0 +1,3988 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Fusion Canvas</title>
+  <style>
+    /* ----- DESIGN TOKENS ----- */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    /* Allow text selection in editable areas */
+    .note-body[contenteditable="true"],
+    input,
+    select,
+    textarea {
+      -webkit-user-select: text;
+      -khtml-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
+    }
+
+    :root {
+      --bg: #0d0c14;
+      --surface: #16141f;
+      --surface2: #1e1b2a;
+      --border: #2a2637;
+      --border-strong: #3a3550;
+      --text: #ede9ff;
+      --text-muted: #8882a8;
+      --text-faint: #4a4566;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.22);
+      --dot-color: rgba(99, 102, 241, 0.1);
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --font-display: "Syne", sans-serif;
+      --font-body: "DM Sans", sans-serif;
+      --font-note: Georgia, "Cambria", "Times New Roman", serif;
+      --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
+      --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4), 0 1px 6px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+      --radius: 14px;
+      --radius-sm: 8px;
+      --transition: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      --toolbar-h: 58px;
+      --toolbox-w: 88px;
+    }
+
+    [data-theme="light"] {
+      --bg: #f0eff5;
+      --surface: #ffffff;
+      --surface2: #f5f4fa;
+      --border: #e0ddef;
+      --border-strong: #c9c6df;
+      --text: #1a1726;
+      --text-muted: #7b778f;
+      --text-faint: #b0adc4;
+      --dot-color: rgba(99, 102, 241, 0.13);
+      --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    svg {
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      width: 18px;
+      height: 18px;
+      display: block;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: inherit;
+      font-family: inherit;
+    }
+
+    /* ----- TOOLBAR ----- */
+    #toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--toolbar-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      gap: 8px;
+      z-index: 1000;
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .toolbar-left,
+    .toolbar-center,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: -0.3px;
+      color: var(--text);
+      margin-right: 8px;
+      white-space: nowrap;
+    }
+
+    .brand-icon {
+      font-size: 20px;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 6px var(--accent-glow));
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all var(--transition);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .icon-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .icon-btn:active {
+      transform: scale(0.93);
+    }
+
+    .icon-btn.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+    }
+
+    .icon-btn:disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .zoom-label {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 46px;
+      text-align: center;
+      user-select: none;
+    }
+
+    .divider {
+      width: 1px;
+      height: 22px;
+      background: var(--border);
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
+    .theme-btn .sun-icon {
+      display: block;
+    }
+
+    .theme-btn .moon-icon {
+      display: none;
+    }
+
+    [data-theme="dark"] .theme-btn .sun-icon {
+      display: none;
+    }
+
+    [data-theme="dark"] .theme-btn .moon-icon {
+      display: block;
+    }
+
+    /* ----- LEFT TOOLBOX ----- */
+    #toolbox {
+      position: fixed;
+      top: var(--toolbar-h);
+      left: 0;
+      bottom: 0;
+      width: var(--toolbox-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 12px 8px;
+      gap: 12px;
+      z-index: 900;
+      overflow-y: auto;
+      transition: background var(--transition), border-color var(--transition), transform var(--transition);
+    }
+
+    #toolbox.hidden {
+      transform: translateX(-100%);
+    }
+
+    .tool-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tool-group:last-child {
+      border-bottom: none;
+    }
+
+    .tool-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+
+    .preset-colors {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+
+    .color-swatch {
+      width: 100%;
+      height: 22px;
+      border-radius: 5px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.12);
+    }
+
+    .color-swatch.active {
+      border-color: var(--text);
+      box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px currentColor;
+    }
+
+    .custom-color-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    .custom-color-input {
+      width: 30px;
+      height: 22px;
+      border: none;
+      border-radius: 5px;
+      padding: 0;
+      cursor: pointer;
+      background: none;
+    }
+
+    .font-selector {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 11px;
+      color: var(--text);
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    .font-selector:focus {
+      border-color: var(--accent);
+    }
+
+    /* ----- MAIN CANVAS ----- */
+    #canvas-wrap {
+      position: fixed;
+      top: var(--toolbar-h);
+      left: var(--toolbox-w);
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+      background: var(--bg);
+      transition: background var(--transition);
+      cursor: default;
+      touch-action: none; /* Prevent default touch behaviors like scrolling */
+    }
+
+    #canvas-wrap.mode-create {
+      cursor: crosshair;
+    }
+
+    #canvas-wrap.mode-pan {
+      cursor: grab;
+    }
+
+    #canvas-wrap.mode-pan.panning {
+      cursor: grabbing;
+    }
+
+    #canvas-wrap::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, var(--dot-color) 1.5px, transparent 1.5px);
+      background-size: var(--grid-size, 32px) var(--grid-size, 32px);
+      background-position: var(--grid-x, 0px) var(--grid-y, 0px);
+      transition: background-image var(--transition);
+    }
+
+    #viewport {
+      position: absolute;
+      inset: 0;
+      overflow: visible;
+      z-index: 1;
+    }
+
+    #world {
+      position: absolute;
+      transform-origin: 0 0;
+      will-change: transform;
+      user-select: none;
+    }
+
+    /* ----- NOTES (TEXT BOXES) ----- */
+    .note {
+      position: absolute;
+      left: 0;
+      top: 0;
+      min-width: 180px;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      transition: box-shadow var(--transition), border-color var(--transition), opacity 0.18s ease, transform 0.18s ease;
+      overflow: hidden;
+      pointer-events: all;
+      will-change: transform;
+    }
+
+    .note:hover:not(.locked) {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .note.selected {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-lg) !important;
+    }
+
+    .note.focused {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow), var(--shadow-lg);
+    }
+
+    .note.locked {
+      opacity: 0.85;
+      cursor: not-allowed;
+    }
+
+    .note.is-searching-match {
+      border-color: var(--warn);
+      box-shadow: 0 0 0 1px var(--warn), 0 0 24px rgba(245, 158, 11, 0.25);
+    }
+
+    .note::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--box-accent, var(--accent));
+      transition: background var(--transition);
+    }
+
+    .note-hdr {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px 6px;
+      gap: 6px;
+      border-bottom: 1px solid var(--border);
+      cursor: move;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+
+    .note-hdr.grabbing {
+      cursor: grabbing;
+    }
+
+    .note-title {
+      flex: 1;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 13px;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      min-width: 0;
+    }
+
+    .note-title::placeholder {
+      color: var(--text-faint);
+    }
+
+    .note-color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--box-accent, var(--accent));
+    }
+
+    .note-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .note-action-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-faint);
+      transition: all var(--transition);
+    }
+
+    .note-action-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .note-action-btn.delete-btn:hover {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .note-body {
+      flex: 1;
+      padding: 10px 12px;
+      overflow-y: auto;
+      font-family: var(--font-note);
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text);
+      outline: none;
+      word-break: break-word;
+      cursor: text;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .note-body:empty::before {
+      content: attr(data-placeholder);
+      color: var(--text-faint);
+      pointer-events: none;
+      font-style: italic;
+    }
+
+    .note-body ul {
+      padding-left: 22px;
+      list-style: disc;
+    }
+
+    .note-body ol {
+      padding-left: 22px;
+      list-style: decimal;
+    }
+
+    .note-rsz {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 24px;
+      height: 24px;
+      cursor: nwse-resize;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      padding: 5px;
+      pointer-events: all;
+    }
+
+    .note-rsz svg {
+      width: 10px;
+      height: 10px;
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    @keyframes noteIn {
+      from {
+        opacity: 0;
+        transform: translate(0, 0) scale(0.86);
+      }
+      to {
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+      }
+    }
+
+    .note.entering {
+      animation: noteIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    /* ----- SELECTION RECTANGLE ----- */
+    #selection-rect {
+      position: fixed;
+      z-index: 400;
+      background: rgba(99, 102, 241, 0.15);
+      border: 2px solid var(--accent);
+      border-radius: 4px;
+      pointer-events: none;
+      display: none;
+    }
+
+    /* ----- FLOATING FORMAT BAR ----- */
+    #format-bar {
+      position: fixed;
+      z-index: 500;
+      display: none;
+      align-items: center;
+      gap: 2px;
+      padding: 5px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 40px;
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(16px) saturate(160%);
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
+      white-space: nowrap;
+    }
+
+    #format-bar.visible {
+      display: flex;
+    }
+
+    .fmt-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      transition: all var(--transition);
+    }
+
+    .fmt-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .fmt-btn.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+    }
+
+    .fmt-divider {
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    .fmt-select {
+      height: 28px;
+      padding: 0 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 11px;
+      color: var(--text);
+      outline: none;
+    }
+
+    .fmt-color-wrap {
+      position: relative;
+      width: 28px;
+      height: 28px;
+    }
+
+    .fmt-color-wrap input[type="color"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+    }
+
+    .fmt-color-label {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      color: var(--text-muted);
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .fmt-color-wrap:hover .fmt-color-label {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    /* ----- SEARCH PANEL ----- */
+    #search-panel {
+      position: fixed;
+      top: 72px;
+      right: 16px;
+      z-index: 450;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      width: 280px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(16px) saturate(160%);
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
+    }
+
+    #search-panel.open {
+      display: flex;
+    }
+
+    .sp-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #sp-input {
+      flex: 1;
+      height: 32px;
+      padding: 0 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    #sp-input:focus {
+      border-color: var(--accent);
+    }
+
+    #sp-input::placeholder {
+      color: var(--text-faint);
+    }
+
+    .sp-close {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all var(--transition);
+    }
+
+    .sp-close:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .sp-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      min-height: 16px;
+    }
+
+    .sp-nav {
+      display: flex;
+      gap: 4px;
+    }
+
+    .sp-nav button {
+      flex: 1;
+      height: 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .sp-nav button:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    /* ----- FONT MANAGER PANEL ----- */
+    #font-panel {
+      position: absolute;
+      top: 72px;
+      left: 16px;
+      z-index: 450;
+      display: none;
+      flex-direction: column;
+      width: 300px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(16px) saturate(160%);
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
+      overflow: hidden;
+    }
+
+    #font-panel.open {
+      display: flex;
+    }
+
+    .fp-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+      cursor: move;
+    }
+
+    .fp-title {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .fp-upload-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      height: 28px;
+      padding: 0 10px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity var(--transition);
+    }
+
+    .fp-upload-btn:hover {
+      opacity: 0.88;
+    }
+
+    .fp-close-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all var(--transition);
+    }
+
+    .fp-close-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .fp-list {
+      max-height: 320px;
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+
+    .fp-empty {
+      padding: 28px 16px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .fp-empty svg {
+      width: 32px;
+      height: 32px;
+      color: var(--text-muted);
+      opacity: 0.4;
+      display: block;
+      margin: 0 auto 10px;
+    }
+
+    .fp-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      transition: background var(--transition);
+    }
+
+    .fp-item:hover {
+      background: var(--surface2);
+    }
+
+    .fp-item-name {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      min-width: 0;
+    }
+
+    .fp-item-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .fp-item-delete {
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .fp-item-delete:hover {
+      background: var(--surface);
+      color: var(--danger);
+    }
+
+    .fp-footer {
+      padding: 8px 14px;
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--text-faint);
+    }
+
+    #font-panel.drag-over {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), var(--shadow-lg);
+    }
+
+    /* ----- MINI MAP ----- */
+    #minimap {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 200px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      z-index: 900;
+      overflow: hidden;
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .minimap-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+
+    .minimap-toggle {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      font-size: 16px;
+      line-height: 1;
+      color: var(--text-faint);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+    }
+
+    .minimap-toggle:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .minimap-canvas {
+      width: 100%;
+      height: 130px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--bg);
+    }
+
+    #minimap.collapsed .minimap-canvas {
+      display: none;
+    }
+
+    .minimap-dot {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .minimap-dot:hover {
+      transform: translate(-50%, -50%) scale(1.4);
+    }
+
+    .minimap-viewport {
+      position: absolute;
+      border: 1.5px solid var(--accent);
+      border-radius: 2px;
+      background: var(--accent-glow);
+      pointer-events: none;
+    }
+
+    /* ----- STATUS BAR ----- */
+    #status-bar {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 150;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      font-size: 11px;
+      color: var(--text-muted);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    #status-mode {
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    /* ----- TOAST ----- */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--text);
+      color: var(--bg);
+      padding: 9px 18px;
+      border-radius: 40px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow-md);
+      animation: toastIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      white-space: nowrap;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toast.success {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .toast.warn {
+      background: var(--warn);
+      color: #fff;
+    }
+
+    .toast.out {
+      animation: toastOut 0.2s ease forwards;
+    }
+
+    .toast-action {
+      border: none;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      cursor: pointer;
+      transition: opacity var(--transition);
+    }
+
+    .toast-action:hover {
+      opacity: 0.85;
+    }
+
+    .toast-action.hidden {
+      display: none;
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes toastOut {
+      to {
+        opacity: 0;
+        transform: translateY(6px) scale(0.95);
+      }
+    }
+
+    /* ----- SAVE INDICATOR ----- */
+    #save-dot {
+      position: fixed;
+      top: 18px;
+      right: 16px;
+      z-index: 1001;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      opacity: 0;
+      transition: opacity 400ms ease, background 400ms ease;
+      pointer-events: none;
+    }
+
+    #save-dot.saving {
+      opacity: 1;
+      background: var(--warn);
+    }
+
+    #save-dot.saved {
+      opacity: 1;
+      background: #22c55e;
+    }
+
+    /* ----- SCROLLBAR ----- */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-faint);
+    }
+
+    /* ----- MOBILE TOOLBOX ----- */
+    #mobile-toolbox {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      transform: translateY(100%);
+      transition: transform var(--transition);
+      z-index: 1000;
+      max-height: 60vh;
+      overflow-y: auto;
+      display: none;
+    }
+
+    #mobile-toolbox.open {
+      transform: translateY(0);
+    }
+
+    .mobile-toolbox-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .mobile-toolbox-close {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      transition: all var(--transition);
+    }
+
+    .mobile-toolbox-close:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .mobile-toolbox-content {
+      padding: 16px;
+    }
+
+    /* ----- RESPONSIVE ----- */
+    @media (max-width: 680px) {
+      :root {
+        --toolbox-w: 0px;
+      }
+      #toolbox {
+        display: none;
+      }
+      #canvas-wrap {
+        left: 0;
+      }
+      .brand-name {
+        display: none;
+      }
+      .toolbar-center .zoom-label {
+        display: none;
+      }
+      #minimap {
+        display: none;
+      }
+      #mobile-toolbox {
+        display: none; /* Hide old mobile toolbox */
+      }
+      #search-panel {
+        display: none; /* Hide search panel on mobile */
+      }
+      #font-panel {
+        display: none; /* Hide font panel on mobile */
+      }
+      .mobile-hamburger {
+        display: block;
+      }
+      #toolboxBtn {
+        display: none; /* Hide toolbox button on mobile */
+      }
+    }
+
+    @media (max-width: 500px) {
+      #toolbar {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 6px 8px;
+      }
+      .tb-center,
+      .tb-right {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .icon-btn {
+        width: 40px;
+        height: 40px;
+      }
+      .mobile-toolbox-content {
+        padding: 20px;
+      }
+      .preset-colors {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .color-swatch {
+        width: 32px;
+        height: 32px;
+      }
+      .note-action-btn {
+        width: 32px;
+        height: 32px;
+      }
+    }
+
+    /* Better touch scrolling */
+    #mobile-toolbox {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Hamburger Menu Styles */
+    .hamburger-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg);
+      z-index: 2000; /* Higher than toolbar */
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .hamburger-overlay.open {
+      display: flex;
+    }
+
+    .hamburger-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .hamburger-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hamburger-brand .brand-icon {
+      font-size: 20px;
+      color: var(--accent);
+    }
+
+    .hamburger-brand .brand-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .hamburger-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+
+    .hamburger-close:hover {
+      background: var(--hover);
+    }
+
+    .hamburger-close svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .hamburger-content {
+      flex: 1;
+      padding: 20px;
+    }
+
+    .hamburger-section {
+      margin-bottom: 32px;
+    }
+
+    .hamburger-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+      padding-left: 4px;
+    }
+
+    .hamburger-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .hamburger-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all var(--transition);
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .hamburger-btn:hover {
+      background: var(--hover);
+      border-color: var(--accent);
+    }
+
+    .hamburger-btn:active {
+      background: var(--active);
+    }
+
+    .hamburger-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .hamburger-btn svg {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .hamburger-tools .tool-group {
+      margin-bottom: 20px;
+    }
+
+    .hamburger-tools .tool-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+
+    .hamburger-tools .preset-colors {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .hamburger-tools .color-swatch {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .hamburger-tools .color-swatch.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--bg);
+    }
+
+    .hamburger-tools .custom-color-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hamburger-tools .custom-color-input {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .hamburger-tools .font-selector {
+      width: 100%;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    /* Mobile hamburger button */
+    .mobile-hamburger {
+      display: none;
+    }
+
+    /* Prevent zoom on input focus on iOS */
+    input[type="color"],
+    input[type="text"],
+    select {
+      font-size: 16px;
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- TOP TOOLBAR -->
+  <header id="toolbar">
+    <div class="toolbar-left">
+      <div class="brand">
+        <span class="brand-icon">⬡</span>
+        <span class="brand-name">Fusion Canvas</span>
+      </div>
+      <div class="divider"></div>
+      <button class="icon-btn" id="undoBtn" title="Undo (Ctrl+Z)" disabled>
+        <svg viewBox="0 0 24 24"><path d="M3 10h10a6 6 0 0 1 0 12H9"/><polyline points="3 10 7 6 3 2"/></svg>
+      </button>
+      <button class="icon-btn" id="redoBtn" title="Redo (Ctrl+Y)" disabled>
+        <svg viewBox="0 0 24 24"><path d="M21 10H11A6 6 0 0 0 5 22h4"/><polyline points="21 10 17 6 21 2"/></svg>
+      </button>
+    </div>
+
+    <div class="toolbar-center">
+      <button class="icon-btn" id="zoomOutBtn" title="Zoom Out (-)">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+      </button>
+      <span class="zoom-label" id="zoomLabel">100%</span>
+      <button class="icon-btn" id="zoomInBtn" title="Zoom In (+)">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+      </button>
+      <button class="icon-btn" id="fitBtn" title="Fit to Screen (F)">
+        <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+      <button class="icon-btn" id="resetBtn" title="Reset View (R)">
+        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
+      <button class="icon-btn" id="toolboxBtn" title="Toggle toolbox">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+      </button>
+      <button class="icon-btn mobile-hamburger" id="hamburgerBtn" title="Menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="divider"></div>
+      <button class="icon-btn" id="modePan" title="Pan mode (V)">
+        <svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v1M14 7V4a2 2 0 0 0-4 0v1M10 8a2 2 0 0 0-4 0v3M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+      </button>
+      <button class="icon-btn" id="modeCreate" title="Create mode (C)">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      </button>
+    </div>
+
+    <div class="toolbar-right">
+      <button class="icon-btn" id="searchBtn" title="Search notes (F)">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+      </button>
+      <button class="icon-btn" id="fontMgrBtn" title="Custom fonts">
+        <svg viewBox="0 0 24 24"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+      </button>
+      <div class="divider"></div>
+      <button class="icon-btn theme-btn" id="themeBtn" title="Toggle theme (T)">
+        <svg class="sun-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <div class="divider"></div>
+      <button class="icon-btn" id="exportBtn" title="Export board (E)">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="icon-btn" id="importBtn" title="Import board">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </button>
+      <input type="file" id="fileInput" accept=".json" style="display:none" />
+    </div>
+  </header>
+
+  <!-- LEFT TOOLBOX (color & font presets) -->
+  <aside id="toolbox">
+    <div class="tool-group">
+      <label class="tool-label">Box color</label>
+      <div class="preset-colors" id="presetColors">
+        <button class="color-swatch active" data-color="#6366f1" style="background:#6366f1"></button>
+        <button class="color-swatch" data-color="#ec4899" style="background:#ec4899"></button>
+        <button class="color-swatch" data-color="#f59e0b" style="background:#f59e0b"></button>
+        <button class="color-swatch" data-color="#10b981" style="background:#10b981"></button>
+        <button class="color-swatch" data-color="#3b82f6" style="background:#3b82f6"></button>
+        <button class="color-swatch" data-color="#ef4444" style="background:#ef4444"></button>
+        <button class="color-swatch" data-color="#8b5cf6" style="background:#8b5cf6"></button>
+        <button class="color-swatch" data-color="#14b8a6" style="background:#14b8a6"></button>
+      </div>
+      <div class="custom-color-row">
+        <label class="tool-label" style="font-size:9px;">Custom</label>
+        <input type="color" id="customColor" class="custom-color-input" value="#6366f1" />
+      </div>
+    </div>
+    <div class="tool-group">
+      <label class="tool-label">Default font</label>
+      <select class="font-selector" id="globalFont">
+        <option value="'DM Sans', sans-serif">DM Sans</option>
+        <option value="'Syne', sans-serif">Syne</option>
+        <option value="Georgia, serif">Georgia</option>
+        <option value="'Courier New', monospace">Courier New</option>
+        <option value="Impact, sans-serif">Impact</option>
+      </select>
+    </div>
+    <div class="tool-group">
+      <div class="canvas-info">
+        <span id="boxCount">0 notes</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CANVAS -->
+  <main id="canvas-wrap" class="mode-pan">
+    <div id="viewport">
+      <div id="world"></div>
+    </div>
+    <div id="selection-rect"></div>
+
+    <!-- FLOATING FORMAT BAR -->
+    <div id="format-bar">
+      <select class="fmt-select" id="fmtFontFamily">
+        <option value="">Default</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Times New Roman">Times New Roman</option>
+        <option value="Arial">Arial</option>
+        <option value="Courier New">Courier New</option>
+      </select>
+      <select class="fmt-select" id="fmtFontSize">
+        <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+        <option value="13">13</option><option value="14">14</option><option value="15" selected>15</option>
+        <option value="16">16</option><option value="18">18</option><option value="20">20</option>
+        <option value="24">24</option><option value="28">28</option><option value="32">32</option>
+        <option value="36">36</option><option value="48">48</option>
+      </select>
+      <div class="fmt-divider"></div>
+      <button class="fmt-btn" data-cmd="bold" title="Bold"><strong>B</strong></button>
+      <button class="fmt-btn" data-cmd="italic" title="Italic"><em>I</em></button>
+      <button class="fmt-btn" data-cmd="underline" title="Underline"><u>U</u></button>
+      <button class="fmt-btn" data-cmd="strikethrough" title="Strikethrough"><s>S</s></button>
+      <div class="fmt-divider"></div>
+      <button class="fmt-btn" data-cmd="justifyLeft" title="Align left">
+        <svg viewBox="0 0 16 16"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="10" y2="8"/><line x1="2" y1="12" x2="12" y2="12"/></svg>
+      </button>
+      <button class="fmt-btn" data-cmd="justifyCenter" title="Align center">
+        <svg viewBox="0 0 16 16"><line x1="2" y1="4" x2="14" y2="4"/><line x1="4" y1="8" x2="12" y2="8"/><line x1="3" y1="12" x2="13" y2="12"/></svg>
+      </button>
+      <button class="fmt-btn" data-cmd="justifyRight" title="Align right">
+        <svg viewBox="0 0 16 16"><line x1="2" y1="4" x2="14" y2="4"/><line x1="6" y1="8" x2="14" y2="8"/><line x1="4" y1="12" x2="14" y2="12"/></svg>
+      </button>
+      <div class="fmt-divider"></div>
+      <button class="fmt-btn" data-cmd="insertUnorderedList" title="Bullet list">
+        <svg viewBox="0 0 24 24"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
+      </button>
+      <button class="fmt-btn" data-cmd="insertOrderedList" title="Numbered list">
+        <svg viewBox="0 0 24 24"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4M4 10h2"/><path d="M6 14H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>
+      </button>
+      <div class="fmt-divider"></div>
+      <div class="fmt-color-wrap">
+        <input type="color" id="fmtTextColor" value="#ede9ff" />
+        <div class="fmt-color-label">
+          <svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 0 0-3-3L4 17v3z"/><line x1="13.5" y1="6.5" x2="17.5" y2="10.5"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEARCH PANEL -->
+    <div id="search-panel">
+      <div class="sp-row">
+        <input type="text" id="sp-input" placeholder="Search notes…" autocomplete="off" />
+        <button class="sp-close" id="sp-close">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="sp-meta" id="sp-meta"></div>
+      <div class="sp-nav">
+        <button id="sp-prev">Previous</button>
+        <button id="sp-next">Next</button>
+      </div>
+    </div>
+
+    <!-- FONT MANAGER PANEL -->
+    <div id="font-panel">
+      <div class="fp-header">
+        <span class="fp-title">Custom Fonts</span>
+        <button class="fp-upload-btn" id="fp-upload-btn">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+        </button>
+        <button class="fp-close-btn" id="fp-close-btn">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="fp-list" class="fp-list"></div>
+      <div id="fp-empty" class="fp-empty">
+        <svg viewBox="0 0 24 24"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+        No custom fonts yet.<br />Upload .ttf, .otf, .woff or .woff2.
+      </div>
+      <div class="fp-footer" id="fp-footer">Fonts stored locally.</div>
+    </div>
+    <input type="file" id="font-file" accept=".ttf,.otf,.woff,.woff2" multiple style="display:none" />
+
+    <!-- MINI MAP -->
+    <div id="minimap">
+      <div class="minimap-header">
+        <span>Overview</span>
+        <button class="minimap-toggle" id="minimapToggle">−</button>
+      </div>
+      <div class="minimap-canvas" id="minimapCanvas">
+        <div class="minimap-viewport" id="minimapViewport"></div>
+      </div>
+    </div>
+
+    <!-- STATUS BAR -->
+    <div id="status-bar">
+      <div class="status-dot"></div>
+      <span id="status-mode">Pan mode</span>
+      <span style="opacity:0.4">·</span>
+      <span id="status-count">0 notes</span>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container"></div>
+
+    <!-- SAVE INDICATOR -->
+    <div id="save-dot" title="Auto-save status"></div>
+
+    <!-- MOBILE TOOLBOX PANEL -->
+    <div id="mobile-toolbox">
+      <div class="mobile-toolbox-header">
+        <span>Tools</span>
+        <button class="mobile-toolbox-close" id="mobileToolboxClose">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="mobile-toolbox-content">
+        <div class="tool-group">
+          <label class="tool-label">Box color</label>
+          <div class="preset-colors" id="mobilePresetColors">
+            <button class="color-swatch active" data-color="#6366f1" style="background:#6366f1"></button>
+            <button class="color-swatch" data-color="#ec4899" style="background:#ec4899"></button>
+            <button class="color-swatch" data-color="#f59e0b" style="background:#f59e0b"></button>
+            <button class="color-swatch" data-color="#10b981" style="background:#10b981"></button>
+            <button class="color-swatch" data-color="#3b82f6" style="background:#3b82f6"></button>
+            <button class="color-swatch" data-color="#ef4444" style="background:#ef4444"></button>
+            <button class="color-swatch" data-color="#8b5cf6" style="background:#8b5cf6"></button>
+            <button class="color-swatch" data-color="#14b8a6" style="background:#14b8a6"></button>
+          </div>
+          <div class="custom-color-row">
+            <label class="tool-label" style="font-size:9px;">Custom</label>
+            <input type="color" id="mobileCustomColor" class="custom-color-input" value="#6366f1" />
+          </div>
+        </div>
+        <div class="tool-group">
+          <label class="tool-label">Default font</label>
+          <select class="font-selector" id="mobileGlobalFont">
+            <option value="'DM Sans', sans-serif">DM Sans</option>
+            <option value="'Syne', sans-serif">Syne</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Courier New', monospace">Courier New</option>
+            <option value="Impact, sans-serif">Impact</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- HAMBURGER MENU OVERLAY (moved to body) -->
+  <div id="hamburger-menu" class="hamburger-overlay">
+    <div class="hamburger-header">
+      <div class="hamburger-brand">
+        <span class="brand-icon">⬡</span>
+        <span class="brand-name">Fusion Canvas</span>
+      </div>
+      <button class="hamburger-close" id="hamburgerClose">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="hamburger-content">
+      <!-- Mode Section -->
+      <div class="hamburger-section">
+        <h3 class="hamburger-section-title">Mode</h3>
+        <div class="hamburger-buttons">
+          <button class="hamburger-btn" id="hamburgerModePan">
+            <svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v1M14 7V4a2 2 0 0 0-4 0v1M10 8a2 2 0 0 0-4 0v3M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+            <span>Pan Mode</span>
+          </button>
+          <button class="hamburger-btn" id="hamburgerModeCreate">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span>Create Mode</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- View Controls -->
+      <div class="hamburger-section">
+        <h3 class="hamburger-section-title">View</h3>
+        <div class="hamburger-buttons">
+          <button class="hamburger-btn" id="hamburgerZoomIn">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+            <span>Zoom In</span>
+          </button>
+          <button class="hamburger-btn" id="hamburgerZoomOut">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+            <span>Zoom Out</span>
+          </button>
+          <button class="hamburger-btn" id="hamburgerFit">
+            <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            <span>Fit to Screen</span>
+          </button>
+          <button class="hamburger-btn" id="hamburgerReset">
+            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            <span>Reset View</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Edit Controls -->
+      <div class="hamburger-section">
+        <h3 class="hamburger-section-title">Edit</h3>
+        <div class="hamburger-buttons">
+          <button class="hamburger-btn" id="hamburgerUndo" disabled>
+            <svg viewBox="0 0 24 24"><path d="M3 10h10a6 6 0 0 1 0 12H9"/><polyline points="3 10 7 6 3 2"/></svg>
+            <span>Undo</span>
+          </button>
+          <button class="hamburger-btn" id="hamburgerRedo" disabled>
+            <svg viewBox="0 0 24 24"><path d="M21 10H11A6 6 0 0 0 5 22h4"/><polyline points="21 10 17 6 21 2"/></svg>
+            <span>Redo</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tools Section -->
+      <div class="hamburger-section">
+        <h3 class="hamburger-section-title">Tools</h3>
+        <div class="hamburger-tools">
+          <div class="tool-group">
+            <label class="tool-label">Box Color</label>
+            <div class="preset-colors" id="hamburgerPresetColors">
+              <button class="color-swatch active" data-color="#6366f1" style="background:#6366f1"></button>
+              <button class="color-swatch" data-color="#ec4899" style="background:#ec4899"></button>
+              <button class="color-swatch" data-color="#f59e0b" style="background:#f59e0b"></button>
+              <button class="color-swatch" data-color="#10b981" style="background:#10b981"></button>
+              <button class="color-swatch" data-color="#3b82f6" style="background:#3b82f6"></button>
+              <button class="color-swatch" data-color="#ef4444" style="background:#ef4444"></button>
+              <button class="color-swatch" data-color="#8b5cf6" style="background:#8b5cf6"></button>
+              <button class="color-swatch" data-color="#14b8a6" style="background:#14b8a6"></button>
+            </div>
+            <div class="custom-color-row">
+              <label class="tool-label" style="font-size:9px;">Custom</label>
+              <input type="color" id="hamburgerCustomColor" class="custom-color-input" value="#6366f1" />
+            </div>
+          </div>
+          <div class="tool-group">
+            <label class="tool-label">Default Font</label>
+            <select class="font-selector" id="hamburgerGlobalFont">
+              <option value="'DM Sans', sans-serif">DM Sans</option>
+              <option value="'Syne', sans-serif">Syne</option>
+              <option value="Georgia, serif">Georgia</option>
+              <option value="'Courier New', monospace">Courier New</option>
+              <option value="Impact, sans-serif">Impact</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions Section -->
+      <div class="hamburger-section">
+        <h3 class="hamburger-section-title">Actions</h3>
+        <div class="hamburger-buttons">
+          <button class="hamburger-btn" id="hamburgerSearch">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+            <span>Search Notes</span>
+          </button>
+          <button class="hamburger-btn" id="hamburgerFontMgr">
+            <svg viewBox="0 0 24 24"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+            <span>Custom Fonts</span>
+          </button>
+          <button class="hamburger-btn" id="hamburgerTheme">
+            <svg class="sun-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <span>Toggle Theme</span>
+          </button>
+          <button class="hamburger-btn" id="hamburgerExport">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Export Board</span>
+          </button>
+          <button class="hamburger-btn" id="hamburgerImport">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Import Board</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      'use strict';
+
+      // ---------- CONSTANTS ----------
+      const CFG = {
+        MIN_SCALE: 0.15,
+        MAX_SCALE: 4,
+        GRID_BASE: 32,
+        NOTE_MIN_W: 180,
+        NOTE_MIN_H: 120,
+        NOTE_DEFAULT_W: 260,
+        NOTE_DEFAULT_H: 160,
+        SAVE_DELAY: 700,
+        STORE_KEY: 'fusion_canvas_v1',
+        CV_OFFSET: 0, // world origin at 0,0
+      };
+
+      // ---------- GLOBAL STATE ----------
+      const S = {
+        notes: new Map(),          // id -> note object
+        nextId: 1,
+        mode: 'pan',               // 'pan' or 'create'
+        panX: 0, panY: 0, scale: 1,
+        // Selection
+        selectedIds: new Set(),
+        // Drag
+        dragging: false, dragId: null, dragStartX: 0, dragStartY: 0, dragNoteStartX: 0, dragNoteStartY: 0,
+        // Resize
+        resizing: false, resizeId: null, resizeStartX: 0, resizeStartY: 0, resizeStartW: 0, resizeStartH: 0,
+        // Pan
+        panning: false, panStartX: 0, panStartY: 0, panStartPanX: 0, panStartPanY: 0,
+        // Lasso
+        lassoActive: false, lassoStart: { x: 0, y: 0 }, lassoEnd: { x: 0, y: 0 },
+        // Group drag
+        groupDragActive: false, groupDragStart: { x: 0, y: 0 }, groupDragOffsets: new Map(),
+        // Pinch zoom
+        pinchCenterX: 0, pinchCenterY: 0,
+        // Active editing note
+        activeNoteId: null,
+        // History
+        history: [],
+        historyIndex: -1,
+        // Colors / font
+        selectedColor: '#6366f1',
+        defaultFont: "'DM Sans', sans-serif",
+        // Theme
+        theme: 'dark',
+        // Auto-save timer
+        saveTimer: null,
+        // RAF for move events
+        rafId: null, pendX: 0, pendY: 0, hasPend: false,
+        // Undo for delete (single)
+        deletedNoteBackup: null,
+      };
+
+      // ---------- DOM ELEMENTS ----------
+      const dom = {
+        world: document.getElementById('world'),
+        viewport: document.getElementById('viewport'),
+        canvasWrap: document.getElementById('canvas-wrap'),
+        undoBtn: document.getElementById('undoBtn'),
+        redoBtn: document.getElementById('redoBtn'),
+        zoomInBtn: document.getElementById('zoomInBtn'),
+        zoomOutBtn: document.getElementById('zoomOutBtn'),
+        zoomLabel: document.getElementById('zoomLabel'),
+        fitBtn: document.getElementById('fitBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        modePan: document.getElementById('modePan'),
+        modeCreate: document.getElementById('modeCreate'),
+        toolboxBtn: document.getElementById('toolboxBtn'),
+        toolbox: document.getElementById('toolbox'),
+        mobileToolbox: document.getElementById('mobile-toolbox'),
+        mobilePresetColors: document.getElementById('mobilePresetColors'),
+        mobileCustomColor: document.getElementById('mobileCustomColor'),
+        mobileGlobalFont: document.getElementById('mobileGlobalFont'),
+        mobileToolboxClose: document.getElementById('mobileToolboxClose'),
+        searchBtn: document.getElementById('searchBtn'),
+        fontMgrBtn: document.getElementById('fontMgrBtn'),
+        themeBtn: document.getElementById('themeBtn'),
+        exportBtn: document.getElementById('exportBtn'),
+        importBtn: document.getElementById('importBtn'),
+        fileInput: document.getElementById('fileInput'),
+        presetColors: document.getElementById('presetColors'),
+        customColor: document.getElementById('customColor'),
+        globalFont: document.getElementById('globalFont'),
+        formatBar: document.getElementById('format-bar'),
+        fmtFontFamily: document.getElementById('fmtFontFamily'),
+        fmtFontSize: document.getElementById('fmtFontSize'),
+        fmtTextColor: document.getElementById('fmtTextColor'),
+        searchPanel: document.getElementById('search-panel'),
+        spInput: document.getElementById('sp-input'),
+        spMeta: document.getElementById('sp-meta'),
+        spClose: document.getElementById('sp-close'),
+        spPrev: document.getElementById('sp-prev'),
+        spNext: document.getElementById('sp-next'),
+        fontPanel: document.getElementById('font-panel'),
+        fpHeader: document.querySelector('.fp-header'),
+        fpList: document.getElementById('fp-list'),
+        fpEmpty: document.getElementById('fp-empty'),
+        fpFooter: document.getElementById('fp-footer'),
+        fpUploadBtn: document.getElementById('fp-upload-btn'),
+        fpCloseBtn: document.getElementById('fp-close-btn'),
+        fontFile: document.getElementById('font-file'),
+        minimap: document.getElementById('minimap'),
+        minimapCanvas: document.getElementById('minimapCanvas'),
+        minimapViewport: document.getElementById('minimapViewport'),
+        minimapToggle: document.getElementById('minimapToggle'),
+        statusMode: document.getElementById('status-mode'),
+        statusCount: document.getElementById('status-count'),
+        toastContainer: document.getElementById('toast-container'),
+        saveDot: document.getElementById('save-dot'),
+        selectionRect: document.getElementById('selection-rect'),
+        boxCount: document.getElementById('boxCount'),
+        // Hamburger menu
+        hamburgerBtn: document.getElementById('hamburgerBtn'),
+        hamburgerMenu: document.getElementById('hamburger-menu'),
+        hamburgerClose: document.getElementById('hamburgerClose'),
+        hamburgerModePan: document.getElementById('hamburgerModePan'),
+        hamburgerModeCreate: document.getElementById('hamburgerModeCreate'),
+        hamburgerZoomIn: document.getElementById('hamburgerZoomIn'),
+        hamburgerZoomOut: document.getElementById('hamburgerZoomOut'),
+        hamburgerFit: document.getElementById('hamburgerFit'),
+        hamburgerReset: document.getElementById('hamburgerReset'),
+        hamburgerUndo: document.getElementById('hamburgerUndo'),
+        hamburgerRedo: document.getElementById('hamburgerRedo'),
+        hamburgerSearch: document.getElementById('hamburgerSearch'),
+        hamburgerFontMgr: document.getElementById('hamburgerFontMgr'),
+        hamburgerTheme: document.getElementById('hamburgerTheme'),
+        hamburgerExport: document.getElementById('hamburgerExport'),
+        hamburgerImport: document.getElementById('hamburgerImport'),
+        hamburgerPresetColors: document.getElementById('hamburgerPresetColors'),
+        hamburgerCustomColor: document.getElementById('hamburgerCustomColor'),
+        hamburgerGlobalFont: document.getElementById('hamburgerGlobalFont'),
+      };
+
+      // ---------- UTILS ----------
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+      function uid() { return 'note_' + (S.nextId++); }
+
+      function throttle(fn, ms) {
+        let last = 0;
+        return function(...args) {
+          const now = Date.now();
+          if (now - last >= ms) { last = now; fn.apply(this, args); }
+        };
+      }
+
+      // Simple HTML sanitizer (allow basic text formatting)
+      function sanitize(html) {
+        if (!html) return '';
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        // Allow only safe tags (p, span, b, i, u, s, ul, ol, li, br, div, etc.)
+        const allowed = new Set(['P','SPAN','STRONG','B','EM','I','U','S','STRIKE','BR','UL','OL','LI','DIV','H1','H2','H3','H4','H5','H6']);
+        const walk = (node) => {
+          if (node.nodeType === 3) return node.cloneNode(false);
+          if (node.nodeType !== 1) return null;
+          if (!allowed.has(node.tagName)) {
+            const frag = document.createDocumentFragment();
+            node.childNodes.forEach(c => { const r = walk(c); if (r) frag.appendChild(r); });
+            return frag;
+          }
+          const el = document.createElement(node.tagName);
+          // Copy only inline styles (font, color, etc.)
+          if (node.style) {
+            ['font-size','font-family','color','font-weight','font-style','text-decoration','text-align'].forEach(prop => {
+              const val = node.style.getPropertyValue(prop);
+              if (val) el.style.setProperty(prop, val);
+            });
+          }
+          node.childNodes.forEach(c => { const r = walk(c); if (r) el.appendChild(r); });
+          return el;
+        };
+        const frag = document.createDocumentFragment();
+        doc.body.childNodes.forEach(c => { const r = walk(c); if (r) frag.appendChild(r); });
+        const div = document.createElement('div');
+        div.appendChild(frag);
+        return div.innerHTML;
+      }
+
+      function rgbToHex(rgb) {
+        const m = rgb.match(/\d+/g);
+        if (!m || m.length < 3) return '#ede9ff';
+        return '#' + m.slice(0,3).map(n => parseInt(n).toString(16).padStart(2,'0')).join('');
+      }
+
+      // ---------- HISTORY ----------
+      function snapshot() {
+        const boxes = {};
+        S.notes.forEach((note, id) => {
+          boxes[id] = {
+            id, x: note.x, y: note.y, w: note.w, h: note.h,
+            title: note.title, content: note.content, color: note.color, font: note.font, locked: note.locked,
+          };
+        });
+        return { boxes, nextId: S.nextId };
+      }
+
+      function pushHistory() {
+        S.history = S.history.slice(0, S.historyIndex + 1);
+        S.history.push(snapshot());
+        if (S.history.length > 80) S.history.shift();
+        else S.historyIndex++;
+        updateHistoryButtons();
+      }
+
+      function undo() {
+        if (S.historyIndex <= 0) return;
+        S.historyIndex--;
+        restoreSnapshot(S.history[S.historyIndex]);
+        showToast('Undone');
+      }
+
+      function redo() {
+        if (S.historyIndex >= S.history.length - 1) return;
+        S.historyIndex++;
+        restoreSnapshot(S.history[S.historyIndex]);
+        showToast('Redone');
+      }
+
+      function restoreSnapshot(snap) {
+        // Clear current notes
+        S.notes.forEach(n => n.el && n.el.remove());
+        S.notes.clear();
+        S.selectedIds.clear();
+        S.activeNoteId = null;
+        hideFormatBar();
+        // Rebuild
+        Object.values(snap.boxes).forEach(data => {
+          const note = createNoteFromData(data);
+          S.notes.set(note.id, note);
+          renderNote(note, false);
+        });
+        S.nextId = snap.nextId;
+        updateCount();
+        updateMinimap();
+        updateHistoryButtons();
+      }
+
+      function updateHistoryButtons() {
+        dom.undoBtn.disabled = S.historyIndex <= 0;
+        dom.redoBtn.disabled = S.historyIndex >= S.history.length - 1;
+        dom.hamburgerUndo.disabled = S.historyIndex <= 0;
+        dom.hamburgerRedo.disabled = S.historyIndex >= S.history.length - 1;
+      }
+
+      // ---------- NOTE CREATION / RENDERING ----------
+      function createNoteData(x, y, color) {
+        const id = uid();
+        return {
+          id,
+          x, y,
+          w: CFG.NOTE_DEFAULT_W,
+          h: CFG.NOTE_DEFAULT_H,
+          title: `Note ${S.notes.size + 1}`,
+          content: '',
+          color: color || S.selectedColor,
+          font: S.defaultFont,
+          locked: false,
+        };
+      }
+
+      function createNoteFromData(data) {
+        return {
+          ...data,
+          el: null,
+          titleEl: null,
+          bodyEl: null,
+          hdrEl: null,
+          lockBtn: null,
+          deleteBtn: null,
+          rszEl: null,
+        };
+      }
+
+      function addNote(x, y) {
+        if (x === undefined) {
+          const rect = dom.canvasWrap.getBoundingClientRect();
+          x = (rect.width / 2 - S.panX) / S.scale - CFG.NOTE_DEFAULT_W/2;
+          y = (rect.height / 2 - S.panY) / S.scale - CFG.NOTE_DEFAULT_H/2;
+        }
+        pushHistory();
+        const data = createNoteData(x, y);
+        const note = createNoteFromData(data);
+        S.notes.set(note.id, note);
+        renderNote(note, true);
+        updateCount();
+        updateMinimap();
+        scheduleAutoSave();
+        // Auto-select and focus title
+        setTimeout(() => {
+          selectNote(note.id);
+          note.titleEl?.focus();
+        }, 50);
+        return note.id;
+      }
+
+      function renderNote(note, animate) {
+        const el = document.createElement('div');
+        el.className = 'note' + (animate ? ' entering' : '');
+        if (note.locked) el.classList.add('locked');
+        el.id = note.id;
+        el.style.left = note.x + 'px';
+        el.style.top = note.y + 'px';
+        el.style.width = note.w + 'px';
+        el.style.minHeight = note.h + 'px';
+        el.style.setProperty('--box-accent', note.color);
+        el.style.fontFamily = note.font;
+
+        el.innerHTML = `
+          <div class="note-hdr">
+            <div class="note-color-dot"></div>
+            <input class="note-title" type="text" value="${escapeHtml(note.title)}" placeholder="Title…" spellcheck="false" />
+            <div class="note-actions">
+              <button class="note-action-btn lock-btn" title="${note.locked ? 'Unlock' : 'Lock'}">
+                ${note.locked ? lockIcon() : unlockIcon()}
+              </button>
+              <button class="note-action-btn delete-btn" title="Delete">
+                ${trashIcon()}
+              </button>
+            </div>
+          </div>
+          <div class="note-body" contenteditable="${note.locked ? 'false' : 'true'}" data-placeholder="Start typing…" spellcheck="false">${note.content}</div>
+          <div class="note-rsz" title="Resize">
+            <svg viewBox="0 0 10 10"><path d="M2 10 L10 2 M6 10 L10 6"/></svg>
+          </div>
+        `;
+
+        note.el = el;
+        note.hdrEl = el.querySelector('.note-hdr');
+        note.titleEl = el.querySelector('.note-title');
+        note.bodyEl = el.querySelector('.note-body');
+        note.lockBtn = el.querySelector('.lock-btn');
+        note.deleteBtn = el.querySelector('.delete-btn');
+        note.rszEl = el.querySelector('.note-rsz');
+
+        // Wire events
+        wireNoteEvents(note);
+        dom.world.appendChild(el);
+      }
+
+      function wireNoteEvents(note) {
+        const { id, el, hdrEl, titleEl, bodyEl, lockBtn, deleteBtn, rszEl } = note;
+
+        // Header drag
+        hdrEl.addEventListener('mousedown', (e) => {
+          if (e.target === titleEl) return;
+          e.preventDefault();
+          if (note.locked) return;
+          startDrag(id, e.clientX, e.clientY);
+        });
+        hdrEl.addEventListener('touchstart', (e) => {
+          if (e.target === titleEl) return;
+          e.preventDefault();
+          const t = e.touches[0];
+          if (note.locked) return;
+          startDrag(id, t.clientX, t.clientY);
+        }, { passive: false });
+
+        // Click to select (but not on buttons)
+        el.addEventListener('mousedown', (e) => {
+          if (e.target.closest('.note-action-btn') || e.target.closest('.note-rsz')) return;
+          if (S.mode === 'pan') {
+            if (e.ctrlKey || e.metaKey) {
+              toggleSelectNote(id);
+            } else {
+              if (!S.selectedIds.has(id)) {
+                clearSelection();
+                addToSelection(id);
+              }
+            }
+          }
+          e.stopPropagation();
+        });
+
+        // Touch to select (but not on buttons)
+        el.addEventListener('touchstart', (e) => {
+          if (e.target.closest('.note-action-btn') || e.target.closest('.note-rsz')) return;
+          e.preventDefault();
+          if (S.mode === 'pan') {
+            // For touch, we don't support multi-select with modifiers
+            if (!S.selectedIds.has(id)) {
+              clearSelection();
+              addToSelection(id);
+            }
+          }
+          e.stopPropagation();
+        }, { passive: false });
+
+        // Title input
+        titleEl.addEventListener('input', () => {
+          note.title = titleEl.value;
+          scheduleAutoSave();
+          updateMinimap();
+        });
+        titleEl.addEventListener('change', () => pushHistory());
+
+        // Body editing
+        bodyEl.addEventListener('focus', () => {
+          if (note.locked) return;
+          S.activeNoteId = id;
+          showFormatBar();
+          syncFormatBar();
+          note.el.classList.add('focused');
+        });
+        bodyEl.addEventListener('blur', () => {
+          note.content = sanitize(bodyEl.innerHTML);
+          pushHistory();
+          scheduleAutoSave();
+          setTimeout(() => {
+            if (!dom.formatBar.contains(document.activeElement)) {
+              S.activeNoteId = null;
+              hideFormatBar();
+              note.el.classList.remove('focused');
+            }
+          }, 120);
+        });
+        bodyEl.addEventListener('input', () => {
+          note.content = bodyEl.innerHTML;
+          scheduleAutoSave();
+          updateMinimap();
+        });
+        bodyEl.addEventListener('keyup', () => syncFormatBar());
+        bodyEl.addEventListener('mouseup', () => syncFormatBar());
+
+        // Lock
+        lockBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleLock(id);
+        });
+        lockBtn.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+        lockBtn.addEventListener('touchend', (e) => {
+          e.stopPropagation();
+          toggleLock(id);
+        }, { passive: false });
+
+        // Delete
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (note.locked) return;
+          deleteNote(id);
+        });
+        deleteBtn.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+        deleteBtn.addEventListener('touchend', (e) => {
+          e.stopPropagation();
+          if (note.locked) return;
+          deleteNote(id);
+        }, { passive: false });
+
+        // Resize
+        rszEl.addEventListener('mousedown', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          if (note.locked) return;
+          startResize(id, e.clientX, e.clientY);
+        });
+        rszEl.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          const t = e.touches[0];
+          if (note.locked) return;
+          startResize(id, t.clientX, t.clientY);
+        }, { passive: false });
+      }
+
+      // ---------- SELECTION ----------
+      function clearSelection() {
+        S.selectedIds.forEach(id => {
+          const n = S.notes.get(id);
+          if (n && n.el) n.el.classList.remove('selected');
+        });
+        S.selectedIds.clear();
+      }
+
+      function addToSelection(id) {
+        S.selectedIds.add(id);
+        const n = S.notes.get(id);
+        if (n && n.el) n.el.classList.add('selected');
+      }
+
+      function removeFromSelection(id) {
+        S.selectedIds.delete(id);
+        const n = S.notes.get(id);
+        if (n && n.el) n.el.classList.remove('selected');
+      }
+
+      function toggleSelectNote(id) {
+        if (S.selectedIds.has(id)) removeFromSelection(id);
+        else addToSelection(id);
+      }
+
+      function selectNote(id) {
+        clearSelection();
+        addToSelection(id);
+      }
+
+      // ---------- DRAG (single or group) ----------
+      function startDrag(id, clientX, clientY) {
+        if (S.mode !== 'pan') return;
+        // If this note is selected and there are multiple, start group drag
+        if (S.selectedIds.has(id) && S.selectedIds.size > 1) {
+          startGroupDrag(clientX, clientY);
+          return;
+        }
+        S.dragging = true;
+        S.dragId = id;
+        const world = clientToWorld(clientX, clientY);
+        const note = S.notes.get(id);
+        S.dragOffX = world.x - note.x;
+        S.dragOffY = world.y - note.y;
+        S.dragStartX = note.x;
+        S.dragStartY = note.y;
+        note.el.classList.add('is-dragging');
+        note.hdrEl.classList.add('grabbing');
+      }
+
+      function onDragMove(clientX, clientY) {
+        if (!S.dragging) return;
+        const world = clientToWorld(clientX, clientY);
+        const note = S.notes.get(S.dragId);
+        if (!note) return;
+        note.x = world.x - S.dragOffX;
+        note.y = world.y - S.dragOffY;
+        note.el.style.left = note.x + 'px';
+        note.el.style.top = note.y + 'px';
+        if (S.activeNoteId === note.id) repositionFormatBar();
+        updateMinimap();
+      }
+
+      function endDrag() {
+        if (!S.dragging) return;
+        const note = S.notes.get(S.dragId);
+        if (note) {
+          note.el.classList.remove('is-dragging');
+          note.hdrEl.classList.remove('grabbing');
+          pushHistory();
+        }
+        S.dragging = false;
+        S.dragId = null;
+      }
+
+      // ---------- GROUP DRAG ----------
+      function startGroupDrag(clientX, clientY) {
+        S.groupDragActive = true;
+        const world = clientToWorld(clientX, clientY);
+        S.groupDragStart = { x: world.x, y: world.y };
+        S.groupDragOffsets.clear();
+        S.selectedIds.forEach(id => {
+          const note = S.notes.get(id);
+          if (note) {
+            S.groupDragOffsets.set(id, { dx: note.x - world.x, dy: note.y - world.y });
+          }
+        });
+      }
+
+      function onGroupDragMove(clientX, clientY) {
+        if (!S.groupDragActive) return;
+        const world = clientToWorld(clientX, clientY);
+        const dx = world.x - S.groupDragStart.x;
+        const dy = world.y - S.groupDragStart.y;
+        S.groupDragOffsets.forEach((offs, id) => {
+          const note = S.notes.get(id);
+          if (note) {
+            note.x = S.groupDragStart.x + offs.dx + dx;
+            note.y = S.groupDragStart.y + offs.dy + dy;
+            note.el.style.left = note.x + 'px';
+            note.el.style.top = note.y + 'px';
+          }
+        });
+        updateMinimap();
+      }
+
+      function endGroupDrag() {
+        if (!S.groupDragActive) return;
+        pushHistory();
+        S.groupDragActive = false;
+        S.groupDragOffsets.clear();
+      }
+
+      // ---------- RESIZE ----------
+      function startResize(id, clientX, clientY) {
+        if (S.mode !== 'pan') return;
+        S.resizing = true;
+        S.resizeId = id;
+        const note = S.notes.get(id);
+        S.resizeStartW = note.w;
+        S.resizeStartH = note.h;
+        S.resizeStartX = clientX;
+        S.resizeStartY = clientY;
+      }
+
+      function onResizeMove(clientX, clientY) {
+        if (!S.resizing) return;
+        const note = S.notes.get(S.resizeId);
+        if (!note) return;
+        const dw = (clientX - S.resizeStartX) / S.scale;
+        const dh = (clientY - S.resizeStartY) / S.scale;
+        note.w = Math.max(CFG.NOTE_MIN_W, S.resizeStartW + dw);
+        note.h = Math.max(CFG.NOTE_MIN_H, S.resizeStartH + dh);
+        note.el.style.width = note.w + 'px';
+        note.el.style.minHeight = note.h + 'px';
+        if (S.activeNoteId === note.id) repositionFormatBar();
+        updateMinimap();
+      }
+
+      function endResize() {
+        if (!S.resizing) return;
+        pushHistory();
+        S.resizing = false;
+        S.resizeId = null;
+      }
+
+      // ---------- LOCK / DELETE ----------
+      function toggleLock(id) {
+        const note = S.notes.get(id);
+        note.locked = !note.locked;
+        note.el.classList.toggle('locked', note.locked);
+        note.lockBtn.innerHTML = note.locked ? lockIcon() : unlockIcon();
+        note.lockBtn.title = note.locked ? 'Unlock' : 'Lock';
+        note.bodyEl.contentEditable = note.locked ? 'false' : 'true';
+        pushHistory();
+        scheduleAutoSave();
+      }
+
+      function deleteNote(id) {
+        pushHistory();
+        const note = S.notes.get(id);
+        if (!note) return;
+        // Store backup for undo
+        S.deletedNoteBackup = {
+          id, x: note.x, y: note.y, w: note.w, h: note.h,
+          title: note.title, content: note.content, color: note.color, font: note.font, locked: note.locked
+        };
+        note.el.classList.add('box-delete');
+        setTimeout(() => note.el.remove(), 180);
+        S.notes.delete(id);
+        if (S.selectedIds.has(id)) removeFromSelection(id);
+        if (S.activeNoteId === id) { S.activeNoteId = null; hideFormatBar(); }
+        updateCount();
+        updateMinimap();
+        scheduleAutoSave();
+        showToast('Note deleted', { action: { label: 'Undo', fn: undoDelete } });
+      }
+
+      function undoDelete() {
+        if (!S.deletedNoteBackup) return;
+        const data = S.deletedNoteBackup;
+        const note = createNoteFromData(data);
+        S.notes.set(note.id, note);
+        renderNote(note, true);
+        updateCount();
+        updateMinimap();
+        pushHistory();
+        showToast('Note restored');
+        S.deletedNoteBackup = null;
+      }
+
+      // ---------- LASSO ----------
+      function startLasso(worldX, worldY) {
+        S.lassoActive = true;
+        S.lassoStart = { x: worldX, y: worldY };
+        S.lassoEnd = { x: worldX, y: worldY };
+        dom.selectionRect.style.display = 'block';
+        updateLassoRect();
+      }
+
+      function updateLasso(worldX, worldY) {
+        if (!S.lassoActive) return;
+        S.lassoEnd = { x: worldX, y: worldY };
+        updateLassoRect();
+      }
+
+      function updateLassoRect() {
+        const left = Math.min(S.lassoStart.x, S.lassoEnd.x);
+        const top = Math.min(S.lassoStart.y, S.lassoEnd.y);
+        const right = Math.max(S.lassoStart.x, S.lassoEnd.x);
+        const bottom = Math.max(S.lassoStart.y, S.lassoEnd.y);
+        const p1 = worldToScreen(left, top);
+        const p2 = worldToScreen(right, bottom);
+        dom.selectionRect.style.left = p1.x + 'px';
+        dom.selectionRect.style.top = p1.y + 'px';
+        dom.selectionRect.style.width = (p2.x - p1.x) + 'px';
+        dom.selectionRect.style.height = (p2.y - p1.y) + 'px';
+      }
+
+      function endLasso() {
+        if (!S.lassoActive) return;
+        S.lassoActive = false;
+        dom.selectionRect.style.display = 'none';
+        const lassoLeft = Math.min(S.lassoStart.x, S.lassoEnd.x);
+        const lassoTop = Math.min(S.lassoStart.y, S.lassoEnd.y);
+        const lassoRight = Math.max(S.lassoStart.x, S.lassoEnd.x);
+        const lassoBottom = Math.max(S.lassoStart.y, S.lassoEnd.y);
+        // If lasso is tiny, ignore
+        if (Math.abs(lassoRight - lassoLeft) < 5 || Math.abs(lassoBottom - lassoTop) < 5) return;
+        // Select notes intersecting lasso
+        clearSelection();
+        S.notes.forEach((note, id) => {
+          const noteLeft = note.x;
+          const noteRight = note.x + note.w;
+          const noteTop = note.y;
+          const noteBottom = note.y + note.h;
+          if (noteRight > lassoLeft && noteLeft < lassoRight && noteBottom > lassoTop && noteTop < lassoBottom) {
+            addToSelection(id);
+          }
+        });
+      }
+
+      // ---------- CANVAS TRANSFORM ----------
+      function applyTransform() {
+        dom.world.style.transform = `translate(${S.panX}px, ${S.panY}px) scale(${S.scale})`;
+        dom.zoomLabel.textContent = Math.round(S.scale * 100) + '%';
+        // Update grid position
+        const gs = CFG.GRID_BASE * S.scale;
+        const gx = ((S.panX % gs) + gs) % gs;
+        const gy = ((S.panY % gs) + gs) % gs;
+        dom.canvasWrap.style.setProperty('--grid-size', gs + 'px');
+        dom.canvasWrap.style.setProperty('--grid-x', gx + 'px');
+        dom.canvasWrap.style.setProperty('--grid-y', gy + 'px');
+        updateMinimap();
+      }
+
+      function clientToWorld(cx, cy) {
+        const rect = dom.canvasWrap.getBoundingClientRect();
+        return {
+          x: (cx - rect.left - S.panX) / S.scale,
+          y: (cy - rect.top - S.panY) / S.scale,
+        };
+      }
+
+      function worldToScreen(wx, wy) {
+        return {
+          x: wx * S.scale + S.panX,
+          y: wy * S.scale + S.panY,
+        };
+      }
+
+      function zoomAt(factor, cx, cy) {
+        const rect = dom.canvasWrap.getBoundingClientRect();
+        const ox = (cx !== undefined ? cx : rect.width/2) - rect.left;
+        const oy = (cy !== undefined ? cy : rect.height/2) - rect.top;
+        const newScale = clamp(S.scale * factor, CFG.MIN_SCALE, CFG.MAX_SCALE);
+        const ratio = newScale / S.scale;
+        S.panX = ox - (ox - S.panX) * ratio;
+        S.panY = oy - (oy - S.panY) * ratio;
+        S.scale = newScale;
+        applyTransform();
+      }
+
+      function zoomTo(targetScale, cx, cy) {
+        const rect = dom.canvasWrap.getBoundingClientRect();
+        const ox = (cx !== undefined ? cx : rect.width/2) - rect.left;
+        const oy = (cy !== undefined ? cy : rect.height/2) - rect.top;
+        const clampedScale = clamp(targetScale, CFG.MIN_SCALE, CFG.MAX_SCALE);
+        const ratio = clampedScale / S.scale;
+        S.panX = ox - (ox - S.panX) * ratio;
+        S.panY = oy - (oy - S.panY) * ratio;
+        S.scale = clampedScale;
+        applyTransform();
+      }
+
+      function zoomIn() { zoomAt(1.2); }
+      function zoomOut() { zoomAt(1/1.2); }
+      function resetView() { S.scale = 1; S.panX = 0; S.panY = 0; applyTransform(); }
+
+      function fitToScreen() {
+        const notes = Array.from(S.notes.values());
+        if (notes.length === 0) { resetView(); return; }
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        notes.forEach(n => {
+          minX = Math.min(minX, n.x);
+          minY = Math.min(minY, n.y);
+          maxX = Math.max(maxX, n.x + n.w);
+          maxY = Math.max(maxY, n.y + n.h);
+        });
+        const pad = 80;
+        const bw = maxX - minX + pad*2;
+        const bh = maxY - minY + pad*2;
+        const rect = dom.canvasWrap.getBoundingClientRect();
+        const scaleX = rect.width / bw;
+        const scaleY = rect.height / bh;
+        S.scale = clamp(Math.min(scaleX, scaleY, 1.5), CFG.MIN_SCALE, CFG.MAX_SCALE);
+        S.panX = rect.width/2 - (minX - pad + bw/2) * S.scale;
+        S.panY = rect.height/2 - (minY - pad + bh/2) * S.scale;
+        applyTransform();
+      }
+
+      // ---------- PAN ----------
+      function startPan(clientX, clientY) {
+        S.panning = true;
+        S.panStartX = clientX;
+        S.panStartY = clientY;
+        S.panStartPanX = S.panX;
+        S.panStartPanY = S.panY;
+        dom.canvasWrap.classList.add('panning');
+      }
+
+      function onPanMove(clientX, clientY) {
+        if (!S.panning) return;
+        S.panX = S.panStartPanX + (clientX - S.panStartX);
+        S.panY = S.panStartPanY + (clientY - S.panStartY);
+        applyTransform();
+      }
+
+      function endPan() {
+        if (!S.panning) return;
+        S.panning = false;
+        dom.canvasWrap.classList.remove('panning');
+      }
+
+      // ---------- MODE ----------
+      function setMode(mode) {
+        S.mode = mode;
+        dom.modePan.classList.toggle('active', mode === 'pan');
+        dom.modeCreate.classList.toggle('active', mode === 'create');
+        dom.hamburgerModePan.classList.toggle('active', mode === 'pan');
+        dom.hamburgerModeCreate.classList.toggle('active', mode === 'create');
+        dom.canvasWrap.className = 'mode-' + mode + (S.panning ? ' panning' : '');
+        dom.statusMode.textContent = mode === 'pan' ? 'Pan mode' : 'Create mode';
+      }
+
+      // ---------- FORMAT BAR ----------
+      function showFormatBar() { dom.formatBar.classList.add('visible'); repositionFormatBar(); }
+      function hideFormatBar() { dom.formatBar.classList.remove('visible'); }
+
+      function repositionFormatBar() {
+        if (!S.activeNoteId) return;
+        const note = S.notes.get(S.activeNoteId);
+        if (!note || !note.el) return;
+        const rect = note.el.getBoundingClientRect();
+        const fw = dom.formatBar.offsetWidth || 500;
+        const fh = dom.formatBar.offsetHeight || 44;
+        const mg = 8;
+        let top = rect.top - fh - mg;
+        if (top < 70) top = rect.bottom + mg;
+        let left = rect.left;
+        if (left + fw > window.innerWidth - mg) left = window.innerWidth - fw - mg;
+        if (left < mg) left = mg;
+        dom.formatBar.style.top = top + 'px';
+        dom.formatBar.style.left = left + 'px';
+      }
+
+      function syncFormatBar() {
+        // Query command states
+        ['bold','italic','underline','strikethrough'].forEach(cmd => {
+          const btn = dom.formatBar.querySelector(`[data-cmd="${cmd}"]`);
+          if (btn) btn.classList.toggle('active', document.queryCommandState(cmd));
+        });
+        // Font family & size from selection
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return;
+        let node = sel.getRangeAt(0).startContainer;
+        if (node.nodeType === 3) node = node.parentElement;
+        if (!node || !node.closest('.note-body')) return;
+        const cs = window.getComputedStyle(node);
+        // Font size
+        const szPx = node.style.fontSize || cs.fontSize;
+        if (szPx) {
+          const num = Math.round(parseFloat(szPx));
+          const opt = Array.from(dom.fmtFontSize.options).find(o => parseInt(o.value) === num);
+          if (opt) dom.fmtFontSize.value = opt.value;
+        }
+        // Font family
+        const ff = node.style.fontFamily || cs.fontFamily;
+        if (ff) {
+          const first = ff.split(',')[0].trim().replace(/['"]/g,'');
+          const opt = Array.from(dom.fmtFontFamily.options).find(o => o.value.split(',')[0].trim().replace(/['"]/g,'') === first);
+          dom.fmtFontFamily.selectedIndex = opt ? opt.index : 0;
+        }
+        // Text color
+        try { dom.fmtTextColor.value = rgbToHex(cs.color); } catch(e) {}
+      }
+
+      function execFormat(cmd) {
+        if (!S.activeNoteId) return;
+        const note = S.notes.get(S.activeNoteId);
+        if (!note) return;
+        note.bodyEl.focus();
+        document.execCommand('styleWithCSS', false, true);
+        document.execCommand(cmd, false, null);
+        syncFormatBar();
+        note.content = note.bodyEl.innerHTML;
+        scheduleAutoSave();
+      }
+
+      function applyFontFamily(family) {
+        if (!S.activeNoteId || !family) return;
+        const note = S.notes.get(S.activeNoteId);
+        if (!note) return;
+        note.bodyEl.focus();
+        document.execCommand('styleWithCSS', false, true);
+        document.execCommand('fontName', false, family);
+        note.content = note.bodyEl.innerHTML;
+        scheduleAutoSave();
+      }
+
+      function applyFontSize(px) {
+        if (!S.activeNoteId) return;
+        const note = S.notes.get(S.activeNoteId);
+        if (!note) return;
+        note.bodyEl.focus();
+        document.execCommand('styleWithCSS', false, false);
+        document.execCommand('fontSize', false, '7');
+        // Replace <font size="7"> with <span style="font-size:...">
+        note.bodyEl.querySelectorAll('font[size="7"]').forEach(f => {
+          const span = document.createElement('span');
+          span.style.fontSize = px + 'px';
+          while (f.firstChild) span.appendChild(f.firstChild);
+          f.parentNode.replaceChild(span, f);
+        });
+        note.content = note.bodyEl.innerHTML;
+        scheduleAutoSave();
+      }
+
+      function applyTextColor(hex) {
+        if (!S.activeNoteId) return;
+        const note = S.notes.get(S.activeNoteId);
+        if (!note) return;
+        note.bodyEl.focus();
+        document.execCommand('styleWithCSS', false, true);
+        document.execCommand('foreColor', false, hex);
+        note.content = note.bodyEl.innerHTML;
+        scheduleAutoSave();
+      }
+
+      // ---------- SEARCH ----------
+      let searchMatches = [];
+      let searchCursor = -1;
+      let searchOpen = false;
+
+      function toggleSearch() {
+        searchOpen = !searchOpen;
+        dom.searchPanel.classList.toggle('open', searchOpen);
+        dom.searchBtn.classList.toggle('active', searchOpen);
+        if (searchOpen) {
+          dom.spInput.focus();
+          runSearch();
+        } else {
+          clearSearchHighlights();
+        }
+      }
+
+      function closeSearch() {
+        searchOpen = false;
+        dom.searchPanel.classList.remove('open');
+        dom.searchBtn.classList.remove('active');
+        clearSearchHighlights();
+      }
+
+      function runSearch() {
+        const q = dom.spInput.value.trim().toLowerCase();
+        clearSearchHighlights();
+        if (!q) {
+          searchMatches = [];
+          searchCursor = -1;
+          dom.spMeta.textContent = '';
+          return;
+        }
+        searchMatches = [];
+        S.notes.forEach((note, id) => {
+          const text = note.bodyEl ? note.bodyEl.textContent : '';
+          if (text.toLowerCase().includes(q)) searchMatches.push(id);
+        });
+        if (searchMatches.length === 0) {
+          searchCursor = -1;
+          dom.spMeta.textContent = 'No results';
+        } else {
+          if (searchCursor < 0 || searchCursor >= searchMatches.length) searchCursor = 0;
+          highlightSearch();
+        }
+      }
+
+      function highlightSearch() {
+        clearSearchHighlights();
+        if (searchMatches.length === 0) return;
+        searchCursor = (searchCursor + searchMatches.length) % searchMatches.length;
+        dom.spMeta.textContent = `${searchCursor+1} of ${searchMatches.length} match${searchMatches.length!==1?'es':''}`;
+        const id = searchMatches[searchCursor];
+        const note = S.notes.get(id);
+        if (note && note.el) {
+          note.el.classList.add('is-searching-match');
+          // Center view on note
+          const rect = dom.canvasWrap.getBoundingClientRect();
+          S.panX = rect.width/2 - (note.x + note.w/2) * S.scale;
+          S.panY = rect.height/2 - (note.y + note.h/2) * S.scale;
+          applyTransform();
+        }
+      }
+
+      function clearSearchHighlights() {
+        S.notes.forEach(n => n.el && n.el.classList.remove('is-searching-match'));
+        dom.spInput.value = '';
+        dom.spMeta.textContent = '';
+      }
+
+      // ---------- TOOLBOX TOGGLE ----------
+      let toolboxHidden = false;
+      let mobileToolboxOpen = false;
+
+      function toggleToolbox() {
+        if (window.innerWidth <= 680) {
+          // Mobile: toggle bottom sheet
+          mobileToolboxOpen = !mobileToolboxOpen;
+          dom.mobileToolbox.classList.toggle('open', mobileToolboxOpen);
+          dom.toolboxBtn.classList.toggle('active', mobileToolboxOpen);
+        } else {
+          // Desktop: toggle sidebar
+          toolboxHidden = !toolboxHidden;
+          dom.toolbox.classList.toggle('hidden', toolboxHidden);
+          dom.toolboxBtn.classList.toggle('active', !toolboxHidden);
+        }
+      }
+
+      // ---------- MINI MAP ----------
+      let minimapTimer = null;
+      function scheduleMinimapUpdate() {
+        if (minimapTimer) return;
+        minimapTimer = requestAnimationFrame(() => { minimapTimer = null; updateMinimap(); });
+      }
+
+      function updateMinimap() {
+        const mc = dom.minimapCanvas;
+        const mw = mc.offsetWidth;
+        const mh = mc.offsetHeight;
+        // Remove old dots
+        mc.querySelectorAll('.minimap-dot').forEach(d => d.remove());
+
+        const notes = Array.from(S.notes.values());
+        if (notes.length === 0) {
+          dom.minimapViewport.style.display = 'none';
+          return;
+        }
+
+        // World bounds
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        notes.forEach(n => {
+          minX = Math.min(minX, n.x);
+          minY = Math.min(minY, n.y);
+          maxX = Math.max(maxX, n.x + n.w);
+          maxY = Math.max(maxY, n.y + n.h);
+        });
+        const pad = 60;
+        minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+        const worldW = maxX - minX;
+        const worldH = maxY - minY;
+        if (worldW <= 0 || worldH <= 0) return;
+
+        const scaleX = mw / worldW;
+        const scaleY = mh / worldH;
+        const sc = Math.min(scaleX, scaleY);
+
+        // Dots
+        notes.forEach(n => {
+          const dot = document.createElement('div');
+          dot.className = 'minimap-dot';
+          const cx = (n.x - minX + n.w/2) * sc;
+          const cy = (n.y - minY + n.h/2) * sc;
+          const dotW = Math.max(6, n.w * sc);
+          const dotH = Math.max(6, n.h * sc);
+          dot.style.left = cx + 'px';
+          dot.style.top = cy + 'px';
+          dot.style.width = dotW + 'px';
+          dot.style.height = dotH + 'px';
+          dot.style.background = n.color;
+          dot.title = n.title;
+          dot.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigateToNote(n.id);
+          });
+          dot.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+          dot.addEventListener('touchend', (e) => {
+            e.stopPropagation();
+            navigateToNote(n.id);
+          }, { passive: false });
+          mc.appendChild(dot);
+        });
+
+        // Viewport rect
+        const canvasRect = dom.canvasWrap.getBoundingClientRect();
+        const vpLeft = (-S.panX / S.scale - minX) * sc;
+        const vpTop = (-S.panY / S.scale - minY) * sc;
+        const vpW = (canvasRect.width / S.scale) * sc;
+        const vpH = (canvasRect.height / S.scale) * sc;
+        const vp = dom.minimapViewport;
+        vp.style.display = 'block';
+        vp.style.left = vpLeft + 'px';
+        vp.style.top = vpTop + 'px';
+        vp.style.width = vpW + 'px';
+        vp.style.height = vpH + 'px';
+      }
+
+      function navigateToNote(id) {
+        const note = S.notes.get(id);
+        if (!note) return;
+        const rect = dom.canvasWrap.getBoundingClientRect();
+        S.panX = rect.width/2 - (note.x + note.w/2) * S.scale;
+        S.panY = rect.height/2 - (note.y + note.h/2) * S.scale;
+        applyTransform();
+        selectNote(id);
+        note.el.classList.add('highlight-flash');
+        setTimeout(() => note.el.classList.remove('highlight-flash'), 900);
+      }
+
+      // ---------- AUTO-SAVE ----------
+      function scheduleAutoSave() {
+        clearTimeout(S.saveTimer);
+        dom.saveDot.className = 'saving';
+        S.saveTimer = setTimeout(() => saveToStorage(), CFG.SAVE_DELAY);
+      }
+
+      function saveToStorage() {
+        const data = {
+          version: 1,
+          theme: S.theme,
+          panX: S.panX, panY: S.panY, scale: S.scale,
+          notes: [],
+        };
+        S.notes.forEach(n => {
+          data.notes.push({
+            id: n.id, x: n.x, y: n.y, w: n.w, h: n.h,
+            title: n.title, content: sanitize(n.content), color: n.color, font: n.font, locked: n.locked,
+          });
+        });
+        try {
+          localStorage.setItem(CFG.STORE_KEY, JSON.stringify(data));
+          dom.saveDot.className = 'saved';
+          setTimeout(() => { dom.saveDot.className = ''; }, 1600);
+        } catch (e) {
+          dom.saveDot.className = '';
+          showToast('Auto-save failed', { warn: true });
+        }
+      }
+
+      function loadFromStorage() {
+        const raw = localStorage.getItem(CFG.STORE_KEY);
+        if (!raw) return;
+        try {
+          const data = JSON.parse(raw);
+          if (data.theme) setTheme(data.theme);
+          if (typeof data.panX === 'number') S.panX = data.panX;
+          if (typeof data.panY === 'number') S.panY = data.panY;
+          if (typeof data.scale === 'number') S.scale = clamp(data.scale, CFG.MIN_SCALE, CFG.MAX_SCALE);
+          if (Array.isArray(data.notes)) {
+            data.notes.forEach(n => {
+              const note = createNoteFromData(n);
+              S.notes.set(note.id, note);
+              renderNote(note, false);
+            });
+            // Update nextId
+            const maxId = Math.max(...data.notes.map(n => parseInt(n.id.split('_')[1] || '0')).filter(v => !isNaN(v)), 0);
+            S.nextId = maxId + 1;
+          }
+        } catch (e) { console.warn('Failed to load', e); }
+      }
+
+      // ---------- EXPORT / IMPORT ----------
+      function exportBoard() {
+        const data = {
+          version: 1,
+          exported: new Date().toISOString(),
+          panX: S.panX, panY: S.panY, scale: S.scale,
+          notes: [],
+        };
+        S.notes.forEach(n => {
+          data.notes.push({
+            id: n.id, x: n.x, y: n.y, w: n.w, h: n.h,
+            title: n.title, content: sanitize(n.content), color: n.color, font: n.font, locked: n.locked,
+          });
+        });
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'canvas_' + Date.now() + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Board exported');
+      }
+
+      function importBoard(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result);
+            if (!Array.isArray(data.notes)) throw new Error('Invalid');
+            // Clear current
+            S.notes.forEach(n => n.el.remove());
+            S.notes.clear();
+            S.selectedIds.clear();
+            S.activeNoteId = null;
+            hideFormatBar();
+            // Restore view
+            if (data.panX) S.panX = data.panX;
+            if (data.panY) S.panY = data.panY;
+            if (data.scale) S.scale = clamp(data.scale, CFG.MIN_SCALE, CFG.MAX_SCALE);
+            data.notes.forEach(n => {
+              const note = createNoteFromData(n);
+              S.notes.set(note.id, note);
+              renderNote(note, false);
+            });
+            const maxId = Math.max(...data.notes.map(n => parseInt(n.id.split('_')[1] || '0')).filter(v => !isNaN(v)), 0);
+            S.nextId = maxId + 1;
+            applyTransform();
+            updateCount();
+            updateMinimap();
+            pushHistory();
+            scheduleAutoSave();
+            showToast(`Imported ${data.notes.length} notes`);
+          } catch (err) {
+            showToast('Invalid file', { warn: true });
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      // ---------- TOAST ----------
+      function showToast(msg, opts = {}) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        if (opts.success) toast.classList.add('success');
+        if (opts.warn) toast.classList.add('warn');
+        toast.innerHTML = `<span>${msg}</span>`;
+        if (opts.action) {
+          const btn = document.createElement('button');
+          btn.className = 'toast-action';
+          btn.textContent = opts.action.label;
+          btn.onclick = () => { opts.action.fn(); hideToast(toast); };
+          toast.appendChild(btn);
+        }
+        dom.toastContainer.appendChild(toast);
+        setTimeout(() => hideToast(toast), opts.dur || 2800);
+      }
+
+      function hideToast(toast) {
+        toast.classList.add('out');
+        setTimeout(() => toast.remove(), 220);
+      }
+
+      // ---------- THEME ----------
+      function setTheme(t) {
+        S.theme = t;
+        document.documentElement.setAttribute('data-theme', t);
+        localStorage.setItem('fusion_theme', t);
+      }
+
+      function toggleTheme() {
+        setTheme(S.theme === 'dark' ? 'light' : 'dark');
+      }
+
+      // ---------- UI UPDATES ----------
+      function updateCount() {
+        const c = S.notes.size;
+        dom.statusCount.textContent = c + ' note' + (c !== 1 ? 's' : '');
+        dom.boxCount.textContent = c + ' note' + (c !== 1 ? 's' : '');
+      }
+
+      // ---------- ICONS ----------
+      function lockIcon() {
+        return `<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+      }
+      function unlockIcon() {
+        return `<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`;
+      }
+      function trashIcon() {
+        return `<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+      }
+      function escapeHtml(unsafe) {
+        return String(unsafe).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      // ---------- EVENT LISTENERS ----------
+      // Canvas mouse events
+      dom.canvasWrap.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        const target = e.target;
+        if (target === dom.canvasWrap || target === dom.viewport || target === dom.world) {
+          // Click on empty canvas
+          if (S.mode === 'create') {
+            if (e.ctrlKey || e.metaKey) {
+              const world = clientToWorld(e.clientX, e.clientY);
+              startLasso(world.x, world.y);
+            } else {
+              const world = clientToWorld(e.clientX, e.clientY);
+              addNote(world.x - CFG.NOTE_DEFAULT_W/2, world.y - CFG.NOTE_DEFAULT_H/2);
+            }
+          } else { // pan mode
+            if (e.ctrlKey || e.metaKey) {
+              const world = clientToWorld(e.clientX, e.clientY);
+              startLasso(world.x, world.y);
+            } else {
+              clearSelection();
+              startPan(e.clientX, e.clientY);
+            }
+          }
+        } else if (S.mode === 'pan' && !e.ctrlKey && !e.metaKey) {
+          // If clicking on a note, selection is handled in note mousedown
+          // But if clicking on non-note, start pan
+          if (!e.target.closest('.note')) {
+            startPan(e.clientX, e.clientY);
+          }
+        }
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        const x = e.clientX, y = e.clientY;
+        if (S.panning) onPanMove(x, y);
+        else if (S.groupDragActive) onGroupDragMove(x, y);
+        else if (S.dragging) onDragMove(x, y);
+        else if (S.resizing) onResizeMove(x, y);
+        else if (S.lassoActive) {
+          const world = clientToWorld(x, y);
+          updateLasso(world.x, world.y);
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (S.lassoActive) endLasso();
+        if (S.groupDragActive) endGroupDrag();
+        endDrag();
+        endResize();
+        endPan();
+      });
+
+      // Touch events with pinch-to-zoom
+      let initialPinchDistance = 0;
+      let initialScale = 1;
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let isDragging = false;
+      let isPanning = false;
+
+      dom.canvasWrap.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+
+        // Check if touch is on empty canvas (not on a note)
+        const target = e.target;
+        const isOnEmptyCanvas = target === dom.canvasWrap || target === dom.viewport || target === dom.world;
+
+        if (e.touches.length === 1) {
+          if (isOnEmptyCanvas) {
+            // Touch on empty canvas
+            if (S.mode === 'create') {
+              e.preventDefault();
+              const world = clientToWorld(touch.clientX, touch.clientY);
+              addNote(world.x - CFG.NOTE_DEFAULT_W/2, world.y - CFG.NOTE_DEFAULT_H/2);
+              return;
+            }
+          }
+          // Single touch - prepare for potential pan or selection
+          isDragging = false;
+          isPanning = false;
+        } else if (e.touches.length === 2) {
+          // Start pinch
+          e.preventDefault();
+          const t1 = e.touches[0];
+          const t2 = e.touches[1];
+          initialPinchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+          initialScale = S.scale;
+          const centerX = (t1.clientX + t2.clientX) / 2;
+          const centerY = (t1.clientY + t2.clientY) / 2;
+          S.pinchCenterX = centerX;
+          S.pinchCenterY = centerY;
+        }
+      }, { passive: false });
+
+      dom.canvasWrap.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          const deltaX = touch.clientX - touchStartX;
+          const deltaY = touch.clientY - touchStartY;
+
+          // If moved more than 10px, start panning
+          if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+            if (!isPanning && !isDragging) {
+              isPanning = true;
+              startPan(touchStartX, touchStartY);
+            }
+            if (isPanning) {
+              onPanMove(touch.clientX, touch.clientY);
+            }
+          }
+        } else if (e.touches.length === 2) {
+          // Handle pinch
+          e.preventDefault();
+          const t1 = e.touches[0];
+          const t2 = e.touches[1];
+          const currentDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+          const scale = initialScale * (currentDistance / initialPinchDistance);
+          const clampedScale = Math.max(CFG.MIN_SCALE, Math.min(CFG.MAX_SCALE, scale));
+          zoomTo(clampedScale, S.pinchCenterX, S.pinchCenterY);
+        }
+      }, { passive: false });
+
+      dom.canvasWrap.addEventListener('touchend', (e) => {
+        if (isPanning) {
+          endPan();
+        }
+        isDragging = false;
+        isPanning = false;
+      }, { passive: false });
+
+      // Wheel zoom
+      dom.canvasWrap.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        zoomAt(e.deltaY < 0 ? 1.1 : 0.9, e.clientX, e.clientY);
+      }, { passive: false });
+
+      // Context menu prevention
+      dom.canvasWrap.addEventListener('contextmenu', e => e.preventDefault());
+
+      // Toolbar buttons
+      dom.undoBtn.addEventListener('click', undo);
+      dom.redoBtn.addEventListener('click', redo);
+      dom.zoomInBtn.addEventListener('click', zoomIn);
+      dom.zoomOutBtn.addEventListener('click', zoomOut);
+      dom.fitBtn.addEventListener('click', fitToScreen);
+      dom.resetBtn.addEventListener('click', resetView);
+      dom.modePan.addEventListener('click', () => setMode('pan'));
+      dom.modeCreate.addEventListener('click', () => setMode('create'));
+      dom.toolboxBtn.addEventListener('click', toggleToolbox);
+      dom.mobileToolboxClose.addEventListener('click', () => {
+        mobileToolboxOpen = false;
+        dom.mobileToolbox.classList.remove('open');
+        dom.toolboxBtn.classList.remove('active');
+      });
+      dom.searchBtn.addEventListener('click', toggleSearch);
+      dom.themeBtn.addEventListener('click', toggleTheme);
+      dom.exportBtn.addEventListener('click', exportBoard);
+      dom.importBtn.addEventListener('click', () => dom.fileInput.click());
+      dom.fileInput.addEventListener('change', (e) => { importBoard(e.target.files[0]); e.target.value = ''; });
+
+      // ========== FIX: Define toggleFontPanel ==========
+      let fontPanelOpen = false;
+      function toggleFontPanel() {
+        fontPanelOpen = !fontPanelOpen;
+        dom.fontPanel.classList.toggle('open', fontPanelOpen);
+        dom.fontMgrBtn.classList.toggle('active', fontPanelOpen);
+      }
+
+      // Hamburger menu
+      let hamburgerOpen = false;
+      let hamburgerToggleTimer = null; // debounce for double-tap
+
+      function toggleHamburger() {
+        if (hamburgerToggleTimer) return;
+        hamburgerToggleTimer = setTimeout(() => { hamburgerToggleTimer = null; }, 300);
+        hamburgerOpen = !hamburgerOpen;
+        dom.hamburgerMenu.classList.toggle('open', hamburgerOpen);
+        dom.hamburgerBtn.classList.toggle('active', hamburgerOpen);
+      }
+
+      function closeHamburger() {
+        hamburgerOpen = false;
+        dom.hamburgerMenu.classList.remove('open');
+        dom.hamburgerBtn.classList.remove('active');
+      }
+
+      dom.hamburgerBtn.addEventListener('click', toggleHamburger);
+      dom.hamburgerClose.addEventListener('click', closeHamburger);
+
+      // Close hamburger menu on escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && hamburgerOpen) {
+          closeHamburger();
+        }
+      });
+
+      // Close hamburger menu when clicking outside
+      dom.hamburgerMenu.addEventListener('click', (e) => {
+        if (e.target === dom.hamburgerMenu) {
+          closeHamburger();
+        }
+      });
+
+      // Hamburger menu buttons
+      dom.hamburgerModePan.addEventListener('click', () => { setMode('pan'); closeHamburger(); });
+      dom.hamburgerModeCreate.addEventListener('click', () => { setMode('create'); closeHamburger(); });
+      dom.hamburgerZoomIn.addEventListener('click', () => { zoomIn(); closeHamburger(); });
+      dom.hamburgerZoomOut.addEventListener('click', () => { zoomOut(); closeHamburger(); });
+      dom.hamburgerFit.addEventListener('click', () => { fitToScreen(); closeHamburger(); });
+      dom.hamburgerReset.addEventListener('click', () => { resetView(); closeHamburger(); });
+      dom.hamburgerUndo.addEventListener('click', () => { undo(); closeHamburger(); });
+      dom.hamburgerRedo.addEventListener('click', () => { redo(); closeHamburger(); });
+      dom.hamburgerSearch.addEventListener('click', () => { toggleSearch(); closeHamburger(); });
+      dom.hamburgerFontMgr.addEventListener('click', () => { toggleFontPanel(); closeHamburger(); }); // Now defined
+      dom.hamburgerTheme.addEventListener('click', () => { toggleTheme(); closeHamburger(); });
+      dom.hamburgerExport.addEventListener('click', () => { exportBoard(); closeHamburger(); });
+      dom.hamburgerImport.addEventListener('click', () => { dom.fileInput.click(); closeHamburger(); });
+
+      // Add touch events for toolbar buttons
+      [dom.undoBtn, dom.redoBtn, dom.zoomInBtn, dom.zoomOutBtn, dom.fitBtn, dom.resetBtn,
+       dom.modePan, dom.modeCreate, dom.toolboxBtn, dom.searchBtn, dom.themeBtn,
+       dom.exportBtn, dom.importBtn, dom.mobileToolboxClose, dom.hamburgerBtn, dom.hamburgerClose].forEach(btn => {
+        if (btn) {
+          btn.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+          // Add touchend handlers for buttons that need click functionality on mobile
+          if (btn === dom.modePan) {
+            btn.addEventListener('touchend', () => setMode('pan'), { passive: false });
+          } else if (btn === dom.modeCreate) {
+            btn.addEventListener('touchend', () => setMode('create'), { passive: false });
+          } else if (btn === dom.toolboxBtn) {
+            btn.addEventListener('touchend', toggleToolbox, { passive: false });
+          } else if (btn === dom.searchBtn) {
+            btn.addEventListener('touchend', toggleSearch, { passive: false });
+          } else if (btn === dom.themeBtn) {
+            btn.addEventListener('touchend', toggleTheme, { passive: false });
+          } else if (btn === dom.exportBtn) {
+            btn.addEventListener('touchend', exportBoard, { passive: false });
+          } else if (btn === dom.importBtn) {
+            btn.addEventListener('touchend', () => dom.fileInput.click(), { passive: false });
+          } else if (btn === dom.undoBtn) {
+            btn.addEventListener('touchend', undo, { passive: false });
+          } else if (btn === dom.redoBtn) {
+            btn.addEventListener('touchend', redo, { passive: false });
+          } else if (btn === dom.zoomInBtn) {
+            btn.addEventListener('touchend', zoomIn, { passive: false });
+          } else if (btn === dom.zoomOutBtn) {
+            btn.addEventListener('touchend', zoomOut, { passive: false });
+          } else if (btn === dom.fitBtn) {
+            btn.addEventListener('touchend', fitToScreen, { passive: false });
+          } else if (btn === dom.resetBtn) {
+            btn.addEventListener('touchend', resetView, { passive: false });
+          } else if (btn === dom.mobileToolboxClose) {
+            btn.addEventListener('touchend', () => {
+              mobileToolboxOpen = false;
+              dom.mobileToolbox.classList.remove('open');
+              dom.toolboxBtn.classList.remove('active');
+            }, { passive: false });
+          } else if (btn === dom.hamburgerBtn) {
+            // Already has click; touchend might cause double, but we debounced toggle
+            btn.addEventListener('touchend', toggleHamburger, { passive: false });
+          } else if (btn === dom.hamburgerClose) {
+            btn.addEventListener('touchend', closeHamburger, { passive: false });
+          }
+        }
+      });
+
+      // Add touch events for hamburger menu buttons
+      [dom.hamburgerModePan, dom.hamburgerModeCreate, dom.hamburgerZoomIn, dom.hamburgerZoomOut,
+       dom.hamburgerFit, dom.hamburgerReset, dom.hamburgerUndo, dom.hamburgerRedo,
+       dom.hamburgerSearch, dom.hamburgerFontMgr, dom.hamburgerTheme, dom.hamburgerExport, dom.hamburgerImport].forEach(btn => {
+        if (btn) {
+          btn.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+          // Touchend handlers are already added above
+        }
+      });
+
+      // Format bar
+      dom.formatBar.querySelectorAll('[data-cmd]').forEach(btn => {
+        btn.addEventListener('mousedown', e => e.preventDefault());
+        btn.addEventListener('click', e => execFormat(btn.dataset.cmd));
+        btn.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+        btn.addEventListener('touchend', e => execFormat(btn.dataset.cmd), { passive: false });
+      });
+      dom.fmtFontFamily.addEventListener('change', e => applyFontFamily(e.target.value));
+      dom.fmtFontSize.addEventListener('change', e => applyFontSize(parseInt(e.target.value)));
+      dom.fmtTextColor.addEventListener('input', e => applyTextColor(e.target.value));
+
+      // Search panel
+      dom.spInput.addEventListener('input', throttle(runSearch, 200));
+      dom.spInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.shiftKey ? searchCursor-- : searchCursor++; highlightSearch(); }
+        if (e.key === 'Escape') closeSearch();
+      });
+      dom.spClose.addEventListener('click', closeSearch);
+      dom.spClose.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      dom.spClose.addEventListener('touchend', closeSearch, { passive: false });
+      dom.spPrev.addEventListener('click', () => { searchCursor--; highlightSearch(); });
+      dom.spPrev.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      dom.spPrev.addEventListener('touchend', () => { searchCursor--; highlightSearch(); }, { passive: false });
+      dom.spNext.addEventListener('click', () => { searchCursor++; highlightSearch(); });
+      dom.spNext.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      dom.spNext.addEventListener('touchend', () => { searchCursor++; highlightSearch(); }, { passive: false });
+
+      // Color swatches
+      dom.presetColors.querySelectorAll('.color-swatch').forEach(sw => {
+        sw.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+        sw.addEventListener('touchend', () => {
+          dom.presetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          sw.classList.add('active');
+          S.selectedColor = sw.dataset.color;
+          dom.customColor.value = sw.dataset.color;
+          if (S.selectedIds.size === 1) {
+            const id = Array.from(S.selectedIds)[0];
+            applyColorToNote(id, S.selectedColor);
+          }
+        }, { passive: false });
+        sw.addEventListener('click', () => {
+          dom.presetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          sw.classList.add('active');
+          S.selectedColor = sw.dataset.color;
+          dom.customColor.value = sw.dataset.color;
+          if (S.selectedIds.size === 1) {
+            const id = Array.from(S.selectedIds)[0];
+            applyColorToNote(id, S.selectedColor);
+          }
+        });
+      });
+      dom.customColor.addEventListener('input', () => {
+        S.selectedColor = dom.customColor.value;
+        dom.presetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        if (S.selectedIds.size === 1) {
+          const id = Array.from(S.selectedIds)[0];
+          applyColorToNote(id, S.selectedColor);
+        }
+      });
+
+      function applyColorToNote(id, color) {
+        const note = S.notes.get(id);
+        if (!note) return;
+        note.color = color;
+        note.el.style.setProperty('--box-accent', color);
+        note.el.querySelector('.note-color-dot').style.background = color;
+        pushHistory();
+        scheduleAutoSave();
+      }
+
+      // Global font
+      dom.globalFont.addEventListener('change', () => {
+        S.defaultFont = dom.globalFont.value;
+        if (S.selectedIds.size === 1) {
+          const id = Array.from(S.selectedIds)[0];
+          const note = S.notes.get(id);
+          if (note) {
+            note.font = S.defaultFont;
+            note.el.style.fontFamily = S.defaultFont;
+            pushHistory();
+            scheduleAutoSave();
+          }
+        }
+      });
+
+      // Mobile toolbox events
+      dom.mobilePresetColors.querySelectorAll('.color-swatch').forEach(sw => {
+        sw.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+        sw.addEventListener('touchend', () => {
+          dom.mobilePresetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          sw.classList.add('active');
+          S.selectedColor = sw.dataset.color;
+          dom.mobileCustomColor.value = sw.dataset.color;
+          dom.customColor.value = sw.dataset.color; // Sync with desktop
+          dom.presetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          dom.presetColors.querySelector(`[data-color="${sw.dataset.color}"]`).classList.add('active');
+          if (S.selectedIds.size === 1) {
+            const id = Array.from(S.selectedIds)[0];
+            applyColorToNote(id, S.selectedColor);
+          }
+        }, { passive: false });
+        sw.addEventListener('click', () => {
+          dom.mobilePresetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          sw.classList.add('active');
+          S.selectedColor = sw.dataset.color;
+          dom.mobileCustomColor.value = sw.dataset.color;
+          dom.customColor.value = sw.dataset.color; // Sync with desktop
+          dom.presetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          dom.presetColors.querySelector(`[data-color="${sw.dataset.color}"]`).classList.add('active');
+          if (S.selectedIds.size === 1) {
+            const id = Array.from(S.selectedIds)[0];
+            applyColorToNote(id, S.selectedColor);
+          }
+        });
+      });
+      dom.mobileCustomColor.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      dom.mobileCustomColor.addEventListener('input', () => {
+        S.selectedColor = dom.mobileCustomColor.value;
+        dom.customColor.value = dom.mobileCustomColor.value; // Sync with desktop
+        dom.mobilePresetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        dom.presetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        if (S.selectedIds.size === 1) {
+          const id = Array.from(S.selectedIds)[0];
+          applyColorToNote(id, S.selectedColor);
+        }
+      });
+      dom.mobileGlobalFont.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      dom.mobileGlobalFont.addEventListener('change', () => {
+        S.defaultFont = dom.mobileGlobalFont.value;
+        dom.globalFont.value = dom.mobileGlobalFont.value; // Sync with desktop
+        if (S.selectedIds.size === 1) {
+          const id = Array.from(S.selectedIds)[0];
+          const note = S.notes.get(id);
+          if (note) {
+            note.font = S.defaultFont;
+            note.el.style.fontFamily = S.defaultFont;
+            pushHistory();
+            scheduleAutoSave();
+          }
+        }
+      });
+
+      // Hamburger menu tools events
+      dom.hamburgerPresetColors.querySelectorAll('.color-swatch').forEach(sw => {
+        sw.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+        sw.addEventListener('touchend', () => {
+          dom.hamburgerPresetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          sw.classList.add('active');
+          S.selectedColor = sw.dataset.color;
+          dom.hamburgerCustomColor.value = sw.dataset.color;
+          dom.customColor.value = sw.dataset.color; // Sync with desktop
+          dom.mobileCustomColor.value = sw.dataset.color; // Sync with mobile
+          dom.presetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          dom.presetColors.querySelector(`[data-color="${sw.dataset.color}"]`).classList.add('active');
+          dom.mobilePresetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          dom.mobilePresetColors.querySelector(`[data-color="${sw.dataset.color}"]`).classList.add('active');
+          if (S.selectedIds.size === 1) {
+            const id = Array.from(S.selectedIds)[0];
+            applyColorToNote(id, S.selectedColor);
+          }
+        }, { passive: false });
+        sw.addEventListener('click', () => {
+          dom.hamburgerPresetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          sw.classList.add('active');
+          S.selectedColor = sw.dataset.color;
+          dom.hamburgerCustomColor.value = sw.dataset.color;
+          dom.customColor.value = sw.dataset.color; // Sync with desktop
+          dom.mobileCustomColor.value = sw.dataset.color; // Sync with mobile
+          dom.presetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          dom.presetColors.querySelector(`[data-color="${sw.dataset.color}"]`).classList.add('active');
+          dom.mobilePresetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          dom.mobilePresetColors.querySelector(`[data-color="${sw.dataset.color}"]`).classList.add('active');
+          if (S.selectedIds.size === 1) {
+            const id = Array.from(S.selectedIds)[0];
+            applyColorToNote(id, S.selectedColor);
+          }
+        });
+      });
+      dom.hamburgerCustomColor.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      dom.hamburgerCustomColor.addEventListener('input', () => {
+        S.selectedColor = dom.hamburgerCustomColor.value;
+        dom.customColor.value = dom.hamburgerCustomColor.value; // Sync with desktop
+        dom.mobileCustomColor.value = dom.hamburgerCustomColor.value; // Sync with mobile
+        dom.hamburgerPresetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        dom.presetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        dom.mobilePresetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        if (S.selectedIds.size === 1) {
+          const id = Array.from(S.selectedIds)[0];
+          applyColorToNote(id, S.selectedColor);
+        }
+      });
+      dom.hamburgerGlobalFont.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      dom.hamburgerGlobalFont.addEventListener('change', () => {
+        S.defaultFont = dom.hamburgerGlobalFont.value;
+        dom.globalFont.value = dom.hamburgerGlobalFont.value; // Sync with desktop
+        dom.mobileGlobalFont.value = dom.hamburgerGlobalFont.value; // Sync with mobile
+        if (S.selectedIds.size === 1) {
+          const id = Array.from(S.selectedIds)[0];
+          const note = S.notes.get(id);
+          if (note) {
+            note.font = S.defaultFont;
+            note.el.style.fontFamily = S.defaultFont;
+            pushHistory();
+            scheduleAutoSave();
+          }
+        }
+      });
+
+      // Minimap toggle
+      dom.minimapToggle.addEventListener('click', () => {
+        dom.minimap.classList.toggle('collapsed');
+        dom.minimapToggle.textContent = dom.minimap.classList.contains('collapsed') ? '+' : '−';
+      });
+
+      // Minimap click to pan
+      dom.minimapCanvas.addEventListener('click', (e) => {
+        if (e.target.classList.contains('minimap-dot')) return;
+        const rect = dom.minimapCanvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const notes = Array.from(S.notes.values());
+        if (notes.length === 0) return;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        notes.forEach(n => {
+          minX = Math.min(minX, n.x);
+          minY = Math.min(minY, n.y);
+          maxX = Math.max(maxX, n.x + n.w);
+          maxY = Math.max(maxY, n.y + n.h);
+        });
+        const pad = 60;
+        minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+        const worldW = maxX - minX; const worldH = maxY - minY;
+        const sc = Math.min(rect.width / worldW, rect.height / worldH);
+        const worldX = mx / sc + minX;
+        const worldY = my / sc + minY;
+        const canvasRect = dom.canvasWrap.getBoundingClientRect();
+        S.panX = canvasRect.width / 2 - worldX * S.scale;
+        S.panY = canvasRect.height / 2 - worldY * S.scale;
+        applyTransform();
+      });
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        const isEditing = document.activeElement && (
+          document.activeElement.tagName === 'INPUT' ||
+          document.activeElement.tagName === 'TEXTAREA' ||
+          document.activeElement.isContentEditable
+        );
+
+        if (isEditing) {
+          if (e.key === 'Escape') {
+            document.activeElement.blur();
+            setMode('pan');
+          }
+          return;
+        }
+
+        if (e.ctrlKey || e.metaKey) {
+          if (e.key === 'z' || e.key === 'Z') {
+            e.preventDefault();
+            e.shiftKey ? redo() : undo();
+          }
+          if (e.key === 'y' || e.key === 'Y') { e.preventDefault(); redo(); }
+          if (e.key === 'a' || e.key === 'A') {
+            e.preventDefault();
+            S.selectedIds.clear();
+            S.notes.forEach((_, id) => addToSelection(id));
+          }
+          return;
+        }
+
+        switch (e.key) {
+          case 'v': case 'V': setMode('pan'); break;
+          case 'c': case 'C': setMode('create'); break;
+          case 'f': case 'F': toggleSearch(); break;
+          case 't': case 'T': toggleTheme(); break;
+          case 'e': case 'E': exportBoard(); break;
+          case '+': case '=': zoomIn(); break;
+          case '-': zoomOut(); break;
+          case '0': resetView(); break;
+          case 'Delete': case 'Backspace':
+            if (S.selectedIds.size > 0) {
+              Array.from(S.selectedIds).forEach(id => deleteNote(id));
+            } else if (S.activeNoteId) {
+              deleteNote(S.activeNoteId);
+            }
+            break;
+          case 'Escape':
+            closeSearch();
+            clearSelection();
+            break;
+        }
+      });
+
+      // Font manager (simplified – integrate from Knowledge Canvas later)
+      // For brevity, we'll just show a placeholder message.
+      // In a full version, you'd include the complete FontManager code.
+      // Here we just wire the panel open/close.
+      dom.fontMgrBtn.addEventListener('click', toggleFontPanel); // Use defined function
+      dom.fpCloseBtn.addEventListener('click', () => {
+        fontPanelOpen = false;
+        dom.fontPanel.classList.remove('open');
+        dom.fontMgrBtn.classList.remove('active');
+      });
+      dom.fpCloseBtn.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      dom.fpCloseBtn.addEventListener('touchend', () => {
+        fontPanelOpen = false;
+        dom.fontPanel.classList.remove('open');
+        dom.fontMgrBtn.classList.remove('active');
+      }, { passive: false });
+      dom.fpUploadBtn.addEventListener('click', () => dom.fontFile.click());
+      dom.fpUploadBtn.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      dom.fpUploadBtn.addEventListener('touchend', () => dom.fontFile.click(), { passive: false });
+      dom.fontFile.addEventListener('change', handleFontUpload);
+
+      // Drag and drop for font files
+      dom.fontPanel.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dom.fontPanel.classList.add('drag-over');
+      });
+
+      dom.fontPanel.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dom.fontPanel.classList.remove('drag-over');
+      });
+
+      dom.fontPanel.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dom.fontPanel.classList.remove('drag-over');
+
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length === 0) return;
+
+        // Simulate file input change
+        const fakeEvent = { target: { files } };
+        handleFontUpload(fakeEvent);
+      });
+
+      // Font upload functionality
+      let customFonts = JSON.parse(localStorage.getItem('fusion_custom_fonts') || '[]');
+
+      function handleFontUpload(e) {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        let uploadedCount = 0;
+        const validExtensions = ['.ttf', '.otf', '.woff', '.woff2'];
+
+        files.forEach(file => {
+          const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+          if (!validExtensions.includes(ext)) {
+            showToast(`Invalid file type: ${file.name}`, { warn: true });
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const fontData = event.target.result;
+            const fontName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+            const fontId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+            // Create font-face CSS
+            const fontFace = new FontFace(fontName, `url(${fontData})`);
+            fontFace.load().then(() => {
+              document.fonts.add(fontFace);
+
+              // Store font data
+              const fontInfo = {
+                id: fontId,
+                name: fontName,
+                data: fontData,
+                originalName: file.name,
+                uploadedAt: Date.now()
+              };
+              customFonts.push(fontInfo);
+              localStorage.setItem('fusion_custom_fonts', JSON.stringify(customFonts));
+
+              // Add to selectors
+              addFontToSelectors(fontName);
+
+              // Update UI
+              updateFontList();
+
+              uploadedCount++;
+              if (uploadedCount === files.length) {
+                showToast(`Uploaded ${uploadedCount} font${uploadedCount > 1 ? 's' : ''}`, { success: true });
+              }
+            }).catch(err => {
+              console.error('Font loading failed:', err);
+              showToast(`Failed to load font: ${fontName}`, { warn: true });
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+
+        e.target.value = '';
+      }
+
+      function addFontToSelectors(fontName) {
+        // Add to desktop selector
+        const desktopOption = document.createElement('option');
+        desktopOption.value = fontName;
+        desktopOption.textContent = fontName;
+        dom.globalFont.appendChild(desktopOption);
+
+        // Add to mobile selector
+        const mobileOption = document.createElement('option');
+        mobileOption.value = fontName;
+        mobileOption.textContent = fontName;
+        dom.mobileGlobalFont.appendChild(mobileOption);
+
+        // Add to format bar selector
+        const formatOption = document.createElement('option');
+        formatOption.value = fontName;
+        formatOption.textContent = fontName;
+        dom.fmtFontFamily.appendChild(formatOption);
+      }
+
+      function updateFontList() {
+        dom.fpList.innerHTML = '';
+
+        if (customFonts.length === 0) {
+          dom.fpEmpty.style.display = 'block';
+          return;
+        }
+
+        dom.fpEmpty.style.display = 'none';
+
+        customFonts.forEach(font => {
+          const fontItem = document.createElement('div');
+          fontItem.className = 'fp-item';
+          fontItem.innerHTML = `
+            <div class="fp-item-name" style="font-family: '${font.name}'">${font.name}</div>
+            <div class="fp-item-meta">${font.originalName}</div>
+            <button class="fp-item-delete" data-id="${font.id}" title="Delete font">
+              <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          `;
+          dom.fpList.appendChild(fontItem);
+        });
+
+        // Add delete event listeners
+        dom.fpList.querySelectorAll('.fp-item-delete').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const fontId = e.currentTarget.dataset.id;
+            deleteCustomFont(fontId);
+          });
+          btn.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+        });
+      }
+
+      function deleteCustomFont(fontId) {
+        const fontIndex = customFonts.findIndex(f => f.id === fontId);
+        if (fontIndex === -1) return;
+
+        const font = customFonts[fontIndex];
+
+        // Remove from selectors
+        [dom.globalFont, dom.mobileGlobalFont, dom.fmtFontFamily].forEach(selector => {
+          const option = selector.querySelector(`option[value="${font.name}"]`);
+          if (option) option.remove();
+        });
+
+        // Remove from storage
+        customFonts.splice(fontIndex, 1);
+        localStorage.setItem('fusion_custom_fonts', JSON.stringify(customFonts));
+
+        // Update UI
+        updateFontList();
+        showToast(`Deleted font: ${font.name}`, { success: true });
+      }
+
+      // Load custom fonts on init
+      function loadCustomFonts() {
+        customFonts.forEach(font => {
+          // Recreate font-face
+          const fontFace = new FontFace(font.name, `url(${font.data})`);
+          fontFace.load().then(() => {
+            document.fonts.add(fontFace);
+            addFontToSelectors(font.name);
+          }).catch(err => {
+            console.warn('Failed to reload font:', font.name, err);
+          });
+        });
+        updateFontList();
+      }
+
+      // Font panel dragging
+      let fontPanelDragging = false;
+      let fontPanelDragStartX = 0;
+      let fontPanelDragStartY = 0;
+      let fontPanelStartX = 0;
+      let fontPanelStartY = 0;
+
+      dom.fpHeader.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.fp-close-btn') || e.target.closest('.fp-upload-btn')) return;
+        fontPanelDragging = true;
+        fontPanelDragStartX = e.clientX;
+        fontPanelDragStartY = e.clientY;
+        const rect = dom.fontPanel.getBoundingClientRect();
+        fontPanelStartX = rect.left;
+        fontPanelStartY = rect.top;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!fontPanelDragging) return;
+        const dx = e.clientX - fontPanelDragStartX;
+        const dy = e.clientY - fontPanelDragStartY;
+        dom.fontPanel.style.left = (fontPanelStartX + dx) + 'px';
+        dom.fontPanel.style.top = (fontPanelStartY + dy) + 'px';
+      });
+
+      document.addEventListener('mouseup', () => {
+        fontPanelDragging = false;
+      });
+
+      // ---------- INIT ----------
+      function init() {
+        // Load theme preference
+        const savedTheme = localStorage.getItem('fusion_theme');
+        if (savedTheme) setTheme(savedTheme);
+        else setTheme('dark');
+
+        // Load board from storage
+        loadFromStorage();
+
+        // Load custom fonts
+        loadCustomFonts();
+
+        // Apply initial transform
+        applyTransform();
+
+        // Update counts
+        updateCount();
+
+        // Sync mobile toolbox with desktop values
+        dom.mobileCustomColor.value = dom.customColor.value;
+        dom.mobileGlobalFont.value = dom.globalFont.value;
+        dom.mobilePresetColors.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        dom.presetColors.querySelectorAll('.color-swatch').forEach(s => {
+          if (s.classList.contains('active')) {
+            dom.mobilePresetColors.querySelector(`[data-color="${s.dataset.color}"]`).classList.add('active');
+          }
+        });
+
+        // Push initial history snapshot
+        pushHistory();
+
+        // Start RAF loop
+        function tick() {
+          applyTransform();
+          requestAnimationFrame(tick);
+        }
+        tick();
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
