@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PromptVault — Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="stylesheet" href="css/admin.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <style>
+    /* ─── Offline notice panel ─── */
+    #offline-section {
+      min-height: calc(100vh - 60px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      background: radial-gradient(ellipse at 30% 40%, rgba(99,59,210,0.1) 0%, transparent 60%);
+    }
+    .offline-card {
+      max-width: 500px;
+      width: 100%;
+      background: rgba(14,12,32,0.85);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 20px;
+      padding: 44px 40px;
+      backdrop-filter: blur(20px);
+      text-align: center;
+    }
+    .offline-icon { font-size: 2.8rem; margin-bottom: 18px; }
+    .offline-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+    .offline-sub {
+      font-size: 0.88rem;
+      color: rgba(180,170,230,0.55);
+      line-height: 1.7;
+      margin-bottom: 28px;
+    }
+    .offline-steps {
+      text-align: left;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin-bottom: 28px;
+    }
+    .offline-steps p {
+      font-size: 0.82rem;
+      color: rgba(220,215,255,0.65);
+      margin-bottom: 8px;
+      line-height: 1.6;
+      padding-left: 1.4em;
+      position: relative;
+    }
+    .offline-steps p:last-child { margin-bottom: 0; }
+    .offline-steps p::before {
+      content: attr(data-step);
+      position: absolute;
+      left: 0;
+      color: #8b5cf6;
+      font-weight: 600;
+    }
+    .offline-code {
+      display: inline-block;
+      background: rgba(139,92,246,0.12);
+      border: 1px solid rgba(139,92,246,0.25);
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-family: monospace;
+      font-size: 0.82rem;
+      color: #a78bfa;
+    }
+    .offline-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.88rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      text-decoration: none;
+      cursor: pointer;
+      transition: 200ms ease;
+    }
+    .offline-back:hover { opacity: 0.9; transform: translateY(-1px); }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Nav ─────────────────────────────────────────────── -->
+  <nav class="admin-nav">
+    <a href="index.html" class="admin-nav__logo">
+      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;background:linear-gradient(135deg,#a78bfa,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">PromptVault</span>
+      <span class="admin-nav__badge">Admin</span>
+    </a>
+    <div class="admin-nav__user" id="admin-user-info" style="display:none">
+      <span id="admin-user-email"></span>
+      <button id="logout-btn">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════
+       OFFLINE NOTICE (shown when USE_LOCAL_DATA = true)
+       ═══════════════════════════════════════════════════════ -->
+  <section id="offline-section">
+    <div class="offline-card">
+      <div class="offline-icon">🔒</div>
+      <h1 class="offline-title">Admin Requires Supabase</h1>
+      <p class="offline-sub">
+        The admin panel needs a live Supabase connection to upload images and manage prompts.<br/>
+        To enable it, follow these steps:
+      </p>
+
+      <div class="offline-steps">
+        <p data-step="1.">Create a free project at <strong>supabase.com</strong></p>
+        <p data-step="2.">Run the SQL schema from <span class="offline-code">README.md</span></p>
+        <p data-step="3.">Create a Storage bucket called <span class="offline-code">prompt-images</span></p>
+        <p data-step="4.">Open <span class="offline-code">js/config.js</span> and fill in your <span class="offline-code">SUPABASE_URL</span> and <span class="offline-code">SUPABASE_ANON_KEY</span></p>
+        <p data-step="5.">Set <span class="offline-code">USE_LOCAL_DATA: false</span> in the same file</p>
+        <p data-step="6.">Create an admin user in Supabase → Authentication → Users</p>
+      </div>
+
+      <a href="index.html" class="offline-back">← Back to Gallery</a>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════
+       LOGIN (shown when USE_LOCAL_DATA = false, not signed in)
+       ═══════════════════════════════════════════════════════ -->
+  <section id="login-section" style="display:none">
+    <div class="login-card">
+      <div class="login-card__header">
+        <div class="login-card__icon">🔐</div>
+        <h1 class="login-card__title">Admin Access</h1>
+        <p class="login-card__sub">Sign in to manage your prompt gallery</p>
+      </div>
+      <form id="login-form" novalidate>
+        <div class="field">
+          <label for="admin-email">Email</label>
+          <input type="email" id="admin-email" placeholder="admin@example.com" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="admin-password">Password</label>
+          <input type="password" id="admin-password" placeholder="••••••••" autocomplete="current-password" required />
+        </div>
+        <p id="login-error" role="alert"></p>
+        <button type="submit" id="login-btn" class="btn-primary">Sign In</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════
+       ADMIN PANEL (shown when signed in)
+       ═══════════════════════════════════════════════════════ -->
+  <section id="admin-section" style="display:none; padding:32px 24px; max-width:1200px; margin:0 auto;">
+
+    <!-- Stats -->
+    <div class="admin-stats">
+      <div class="stat-card">
+        <div class="stat-card__value" id="total-prompts">—</div>
+        <div class="stat-card__label">Total Prompts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__value" id="total-categories">—</div>
+        <div class="stat-card__label">Categories</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__value" id="latest-date">—</div>
+        <div class="stat-card__label">Last Published</div>
+      </div>
+    </div>
+
+    <div class="admin-grid">
+
+      <!-- Publish form -->
+      <div>
+        <div class="admin-card">
+          <h2 class="admin-card__title"><span>✦</span> Publish New Prompt</h2>
+
+          <form id="publish-form" novalidate>
+            <div id="dropzone" role="button" aria-label="Upload image" tabindex="0">
+              <input type="file" id="image-input" accept="image/*" aria-label="Choose image" />
+              <img id="image-preview" src="" alt="Preview" />
+              <div class="dropzone__placeholder">
+                <div class="dropzone__icon">🖼</div>
+                <span class="dropzone__label">Drop image here or click to browse</span>
+                <span class="dropzone__sub">PNG, JPG, WebP · Max 10 MB</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="prompt-text">Prompt Text</label>
+              <textarea id="prompt-text" rows="5"
+                placeholder="A cinematic portrait of a lone astronaut on a desolate alien moon, dramatic rim lighting, photorealistic, 8k…"
+                required></textarea>
+            </div>
+
+            <div class="field">
+              <label for="category-select">Category</label>
+              <select id="category-select" required>
+                <option value="Portrait">Portrait</option>
+                <option value="Landscape">Landscape</option>
+                <option value="Abstract">Abstract</option>
+                <option value="Architecture">Architecture</option>
+                <option value="Fantasy">Fantasy</option>
+                <option value="Sci-Fi">Sci-Fi</option>
+                <option value="Character">Character</option>
+                <option value="Product">Product</option>
+                <option value="General">General</option>
+              </select>
+            </div>
+
+            <div id="upload-progress" role="progressbar" aria-label="Uploading"></div>
+            <p id="status-msg" class="status-msg" role="status" aria-live="polite"></p>
+
+            <button type="submit" id="publish-btn" class="btn-primary">✦ Publish Prompt</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Prompts list -->
+      <div>
+        <div class="admin-card">
+          <h2 class="admin-card__title">
+            <span>≡</span> All Prompts
+            <span class="admin-card__title-badge" id="list-count">Loading…</span>
+          </h2>
+          <div id="prompts-list" role="list" aria-label="Published prompts"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── Edit Modal ──────────────────────────────────────── -->
+  <div id="edit-modal" role="dialog" aria-modal="true" aria-label="Edit prompt">
+    <div class="modal__card">
+      <h2 class="modal__title">Edit Prompt</h2>
+      <div class="field">
+        <label for="edit-prompt-text">Prompt Text</label>
+        <textarea id="edit-prompt-text" rows="6"></textarea>
+      </div>
+      <div class="field">
+        <label for="edit-category">Category</label>
+        <select id="edit-category">
+          <option value="Portrait">Portrait</option>
+          <option value="Landscape">Landscape</option>
+          <option value="Abstract">Abstract</option>
+          <option value="Architecture">Architecture</option>
+          <option value="Fantasy">Fantasy</option>
+          <option value="Sci-Fi">Sci-Fi</option>
+          <option value="Character">Character</option>
+          <option value="Product">Product</option>
+          <option value="General">General</option>
+        </select>
+      </div>
+      <div class="modal__actions">
+        <button id="cancel-edit-btn" class="btn-secondary">Cancel</button>
+        <button id="save-edit-btn" class="btn-primary" style="width:auto;padding:9px 24px;">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+[
+  {
+    "id": "local-1",
+    "image_url": "https://picsum.photos/seed/aurora/600/450",
+    "prompt_text": "A breathtaking aurora borealis over a snow-covered pine forest, long exposure photography, deep teal and violet hues reflecting on a frozen lake, ultra-sharp 8k, cinematic, Nikon Z9",
+    "category": "Landscape",
+    "created_at": "2025-03-10T10:00:00Z"
+  },
+  {
+    "id": "local-2",
+    "image_url": "https://picsum.photos/seed/portrait1/600/450",
+    "prompt_text": "Close-up portrait of a woman with iridescent butterfly wings growing from her temples, ethereal studio lighting, bokeh background of golden particles, hyper-realistic, 85mm f/1.4",
+    "category": "Portrait",
+    "created_at": "2025-03-09T15:30:00Z"
+  },
+  {
+    "id": "local-3",
+    "image_url": "https://picsum.photos/seed/scifi99/600/450",
+    "prompt_text": "Massive alien megastructure floating above a gas giant, cyberpunk neon lighting, reflective metallic surfaces, volumetric clouds, cinematic wide angle, concept art, artstation trending",
+    "category": "Sci-Fi",
+    "created_at": "2025-03-09T09:15:00Z"
+  },
+  {
+    "id": "local-4",
+    "image_url": "https://picsum.photos/seed/abstract77/600/450",
+    "prompt_text": "Fluid abstract painting of liquid mercury and molten gold colliding in zero gravity, macro photography, deep black background, vivid silver and amber color palette, ultra-detailed",
+    "category": "Abstract",
+    "created_at": "2025-03-08T18:45:00Z"
+  },
+  {
+    "id": "local-5",
+    "image_url": "https://picsum.photos/seed/arch22/600/450",
+    "prompt_text": "Zaha Hadid inspired futuristic concert hall at dusk, flowing organic curves in white concrete, dramatic uplighting, long exposure car trails, architectural photography, f/8 ISO 100",
+    "category": "Architecture",
+    "created_at": "2025-03-08T11:00:00Z"
+  },
+  {
+    "id": "local-6",
+    "image_url": "https://picsum.photos/seed/fantasy44/600/450",
+    "prompt_text": "Ancient dragon curled around a glowing crystal spire on a mountaintop, stormy sky with lightning, mossy ruins, dramatic chiaroscuro lighting, oil painting style, fantasy epic, by Greg Rutkowski",
+    "category": "Fantasy",
+    "created_at": "2025-03-07T20:00:00Z"
+  },
+  {
+    "id": "local-7",
+    "image_url": "https://picsum.photos/seed/char55/600/450",
+    "prompt_text": "Samurai warrior in obsidian armor standing in heavy rain, cherry blossom petals mid-air, dramatic low angle, neon city background, cyberpunk Japan aesthetic, photorealistic, cinematic lens flare",
+    "category": "Character",
+    "created_at": "2025-03-07T14:20:00Z"
+  },
+  {
+    "id": "local-8",
+    "image_url": "https://picsum.photos/seed/prod88/600/450",
+    "prompt_text": "Luxury perfume bottle on a dark marble surface, gold and obsidian accents, macro studio photograph, dramatic rim lighting, soft fog from dry ice, commercial photography, 100mm f/2.8 macro",
+    "category": "Product",
+    "created_at": "2025-03-06T09:30:00Z"
+  },
+  {
+    "id": "local-9",
+    "image_url": "https://picsum.photos/seed/port99/600/450",
+    "prompt_text": "Elderly Japanese fisherman at golden hour, deeply weathered face full of stories, catching light on a misty harbour, candid documentary photography, Leica M11, Kodak Portra 800 grain",
+    "category": "Portrait",
+    "created_at": "2025-03-05T16:45:00Z"
+  },
+  {
+    "id": "local-10",
+    "image_url": "https://picsum.photos/seed/land33/600/450",
+    "prompt_text": "Volcanic eruption at midnight in Iceland, rivers of glowing lava meeting the black ocean, steam explosions, Milky Way overhead, long exposure, drone aerial photography, National Geographic",
+    "category": "Landscape",
+    "created_at": "2025-03-05T08:00:00Z"
+  },
+  {
+    "id": "local-11",
+    "image_url": "https://picsum.photos/seed/abst11/600/450",
+    "prompt_text": "Microscopic coral reef reimagined as a glowing alien cityscape, bioluminescent blues and magentas, depth of field, scientific macro illustration, Studio Ghibli meets NASA, digital art",
+    "category": "Abstract",
+    "created_at": "2025-03-04T21:15:00Z"
+  },
+  {
+    "id": "local-12",
+    "image_url": "https://picsum.photos/seed/scifi12/600/450",
+    "prompt_text": "Interior of a derelict space station overgrown with luminescent fungi, shafts of light through hull breaches, astronaut silhouette, atmospheric fog, sci-fi horror, concept art, Ridley Scott inspired",
+    "category": "Sci-Fi",
+    "created_at": "2025-03-04T13:00:00Z"
+  }
+]
